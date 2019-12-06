@@ -80,12 +80,12 @@ def kullback_leibler_divergence(args):
 def build_hyperboloid_asym_model(num_attributes, 
 	embedding_dim, 
 	num_negative_samples, 
-	num_hidden=512,
+	num_hidden=256,
 	lr=1e-1):
 
 	input_transform = Dense(num_hidden,
 		# activation=exp_map_0,
-		activation="tanh",
+		activation="elu",
 		kernel_regularizer=regularizers.l2(reg),
 		bias_regularizer=regularizers.l2(reg),
 		# kernel_initializer=RandomUniform(-m, m),
@@ -111,7 +111,7 @@ def build_hyperboloid_asym_model(num_attributes,
 		# kernel_initializer=RandomUniform(-m, m),
 		kernel_regularizer=regularizers.l2(reg),
 		bias_regularizer=regularizers.l2(reg),
-		name="euclidean_feedforward",
+		name="dense_to_hyperboloid",
 		trainable=True
 	)
 
@@ -131,7 +131,7 @@ def build_hyperboloid_asym_model(num_attributes,
 	# hyperboloid_shift = HyperboloidFeedForwardLayer(embedding_dim)
 
 	sigma_layer = Dense(embedding_dim, 
-		activation=lambda x: K.elu(x) + 1,
+		activation=lambda x: K.elu(x) + 1.,
 		kernel_regularizer=regularizers.l2(reg),
 		bias_regularizer=regularizers.l2(reg),
 		# kernel_initializer=RandomUniform(-m, m),
@@ -164,8 +164,8 @@ def build_hyperboloid_asym_model(num_attributes,
 	trainable_hyperboloid = to_hyperboloid(
 		hyperboloid_embedding_layer(
 		# to_hyperboloid_1(
-			input_transform(trainable_model_input)
-			# )
+		input_transform(trainable_model_input)
+		# )
 	))
 
 	trainable_sigmas = sigma_layer(
@@ -179,8 +179,8 @@ def build_hyperboloid_asym_model(num_attributes,
 		name="kullback_leibler_layer")([mus, trainable_sigmas])
 
 	trainable_model = Model(trainable_model_input, 
-			kds,
-			name="trainable_model")
+		kds,
+		name="trainable_model")
 
 	# optimizer = ExponentialMappingOptimizer(lr=lr)
 	optimizer = "adam"

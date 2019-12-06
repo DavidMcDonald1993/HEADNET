@@ -33,7 +33,7 @@ config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
  
 # Only allow a total of half the GPU memory to be allocated
-config.gpu_options.per_process_gpu_memory_fraction = 0.75
+config.gpu_options.per_process_gpu_memory_fraction = 0.25
 
 config.log_device_placement=False
 config.allow_soft_placement=True

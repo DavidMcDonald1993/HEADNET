@@ -5,6 +5,7 @@ headnet/tree.py
 headnet/metrics.py
 headnet/hyperbolic_feedforward.py
 headnet/poincare_layers.py
+headnet/node2vec_sampling.py
 walks
 embeddings
 *.png

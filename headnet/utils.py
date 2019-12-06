@@ -15,7 +15,7 @@ import pandas as pd
 
 import pickle as pkl
 
-from .node2vec_sampling import Graph 
+# from .node2vec_sampling import Graph 
 
 from multiprocessing.pool import Pool 
 
@@ -24,7 +24,6 @@ import matplotlib.pyplot as plt
 from collections import Counter
 
 from scipy.sparse import identity
-
 
 def load_data(args):
 
@@ -143,7 +142,7 @@ def determine_positive_and_negative_samples(graph, args):
 
 		# counts = np.sum(positive_samples, axis=0).sum(axis=1).A
 		for k in range(len(positive_samples)):
-			if False or k == args.context_size:
+			if True or k == args.context_size:
 				# neg_samples = counts * counts.T 
 				neg_samples = np.ones((N, N), ) #* np.exp(-(args.context_size+1))
 				neg_samples[
