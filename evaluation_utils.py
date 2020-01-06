@@ -221,8 +221,10 @@ def compute_scores(embedding, dist_fn):
 
 	return scores
 
+def evaluate_precision_at_k(scores, 
+	edgelist,  
+	k=10):
 
-def evaluate_precision_at_k(scores, edgelist, non_edgelist, k=10):
 	edgelist_dict = {}
 	for u, v in edgelist:
 		if u not in edgelist_dict:
@@ -242,7 +244,7 @@ def evaluate_precision_at_k(scores, edgelist, non_edgelist, k=10):
 
 def evaluate_mean_average_precision(scores, 
 	edgelist, 
-	non_edgelist):
+	):
 	edgelist_dict = {}
 	for u, v in edgelist:
 		if u not in edgelist_dict:

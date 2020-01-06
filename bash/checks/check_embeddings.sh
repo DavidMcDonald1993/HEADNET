@@ -7,7 +7,7 @@ do
 	do	
 		for seed in {00..29}
 		do
-			for exp in recon_experiment lp_experiment
+			for exp in recon_experiment lp_experiment rn_experiment
 			do
 				embedding_dir=$(printf \
 				"embeddings/${dataset}/${exp}/seed=%03d/dim=%03d" ${seed} ${dim})

@@ -89,7 +89,7 @@ def main():
 
 	map_lp = evaluate_mean_average_precision(scores, 
 		test_edges, 
-		nx.non_edges(graph))
+		)
 
 	print ("MAP lp", map_lp)
 

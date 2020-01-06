@@ -7,7 +7,7 @@ sys.path.append("../")
 import os
 os.environ["PYTHON_EGG_CACHE"] = "/rds/projects/2018/hesz01/poincare-embeddings/python-eggs"
 
-
+import random
 import numpy as np
 import networkx as nx
 
@@ -15,6 +15,7 @@ import argparse
 
 from headnet.utils import load_data
 from evaluation_utils import load_embedding, compute_scores, evaluate_rank_AUROC_AP, evaluate_mean_average_precision, evaluate_precision_at_k, touch, threadsafe_save_test_results
+from remove_utils import sample_non_edges
 
 def parse_args():
 
@@ -54,18 +55,23 @@ def main():
 	print ("Loaded dataset")
 	print ()
 
+	random.seed(args.seed)
 	
 	test_edges = np.array(list(graph.edges()))
-	test_non_edges = np.array(list(nx.non_edges(graph)))
-
 	num_edges = len(test_edges)
+
+	# test_non_edges = np.array(list(nx.non_edges(graph)))
+	test_non_edges = sample_non_edges(graph, 
+		set(test_edges),
+		num_edges)
 	num_non_edges = len(test_non_edges)
 
-	np.random.seed(args.seed)
-	idx = np.random.permutation(num_non_edges, )[:num_edges]
-	test_non_edges = test_non_edges[idx]
+	# np.random.seed(args.seed)
+	# idx = np.random.permutation(num_non_edges, )[:num_edges]
+	# test_non_edges = test_non_edges[idx]
 
-	embedding = load_embedding(args.dist_fn, args.embedding_directory)
+	embedding = load_embedding(args.dist_fn, 
+		args.embedding_directory)
 	scores = compute_scores(embedding, args.dist_fn)
 
 	test_results = dict()
@@ -79,12 +85,12 @@ def main():
 		"roc_recon": roc_recon})
 
 	map_recon = evaluate_mean_average_precision(scores, 
-		test_edges, test_non_edges)
+		test_edges)
 	test_results.update({"map_recon": map_recon})
 
 	precisions_at_k = [(k, 
 		evaluate_precision_at_k(scores,  
-			test_edges, test_non_edges, k=k))
+			test_edges, k=k))
 			for k in (1, 3, 5, 10)]
 	for k, pk in precisions_at_k:
 		print ("precision at", k, pk)
