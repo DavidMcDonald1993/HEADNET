@@ -98,6 +98,8 @@ def parse_args():
 	parser.add_argument('--visualise', action="store_true", 
 		help='flag to visualise embedding (embedding_dim must be 2)')
 
+	parser.add_argument("--training-nodes", dest="training_nodes",
+		help="Path to list of nodes to train on.")
 
 	args = parser.parse_args()
 	return args
@@ -139,6 +141,14 @@ def main():
 
 	print ("Configured paths")
 
+	nodes = sorted(graph.nodes())
+
+	if args.training_nodes:
+		print ("loading training nodes from", args.training_nodes)
+		training_nodes = pd.read_csv(args.training_nodes, index_col=0).values.flatten()
+		graph = graph.subgraph(training_nodes)
+
+
 	# build model
 	num_features = features.shape[1]
 	
@@ -157,7 +167,7 @@ def main():
 			mode="min",
 			verbose=True),
 		Checkpointer(epoch=initial_epoch, 
-			nodes=sorted(graph.nodes()), 
+			nodes=nodes, 
 			embedding_directory=args.embedding_path,
 			model=model,
 			embedder=embedder,

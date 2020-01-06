@@ -12,6 +12,7 @@ embeddings
 *.png
 datasets
 edgelists
+removed_nodes
 sps
 notes
 jupyter_notebook

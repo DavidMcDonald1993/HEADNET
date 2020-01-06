@@ -37,7 +37,7 @@ class Checkpointer(Callback):
 		self.save_model()
 
 	def remove_old_models(self):
-		for old_model_path in sorted(glob.glob(os.path.join(self.embedding_directory, "*")))[:-3*self.history]:
+		for old_model_path in sorted(glob.glob(os.path.join(self.embedding_directory, "*"))):
 			print ("removing model: {}".format(old_model_path))
 			os.remove(old_model_path)
 
