@@ -1,39 +1,22 @@
 import keras.backend as K
 import tensorflow as tf 
-from keras.layers import Input, Dense, Activation, Lambda, Concatenate
+from keras.layers import Input, Dense, Activation, Lambda, Reshape
 from keras.models import Model
 from keras.initializers  import RandomUniform
 from keras import regularizers
+from tensorflow.train import AdamOptimizer
+
 
 from headnet.losses import asym_hyperbolic_loss
 from headnet.optimizers import ExponentialMappingOptimizer
 from headnet.hyperboloid_layers import logarithmic_map, parallel_transport, exp_map_0
 from headnet.hyperboloid_layers import HyperboloidFeedForwardLayer
 
-reg = 1e-3
-# m = 1e-3
-
-# def minkowski_dot(x, y):
-# 	assert len(x.shape) == len(y.shape)
-# 	return K.sum(x[...,:-1] * y[...,:-1], axis=-1, keepdims=True) - x[...,-1:] * y[...,-1:]
-
-# def parallel_transport_hyperboloid(p, q, x):
-# 	alpha = -minkowski_dot(p, q)
-
-# 	return x + minkowski_dot(q - alpha * p, x) * (p + q)  / \
-# 		K.maximum(alpha + 1, K.epsilon())
-
-# def logarithmic_map_hyperboloid(p, x):
-# 	assert len(p.shape) == len(x.shape)
-
-# 	alpha = -minkowski_dot(p, x)
-
-# 	alpha = K.maximum(alpha, 1 + K.epsilon())
-
-# 	return tf.acosh(alpha) * (x - alpha * p) / \
-# 		K.maximum(K.sqrt(K.maximum(alpha ** 2 - 1., 0.)), K.epsilon())
+reg = 0e-3
+initializer="glorot_uniform"#RandomUniform(-1e-5, 1e-5)
 
 def map_to_tangent_space_mu_zero(mus):
+
 
 	source_embedding = mus[:,:1]
 	target_embedding = mus[:,1:]
@@ -66,13 +49,17 @@ def kullback_leibler_divergence(args):
 	sigma_ratio = target_sigma / source_sigma
 
 	trace_fac = K.sum(sigma_ratio,
-		axis=-1, keepdims=True)
+		axis=-1, 
+		keepdims=True)
 
 	mu_sq_diff = K.sum(mus ** 2 / \
 		source_sigma,
-		axis=-1, keepdims=True) # assume sigma inv is diagonal
+		axis=-1, 
+		keepdims=True) # assume sigma inv is diagonal
 
-	log_det = K.sum(K.log(sigma_ratio), axis=-1, keepdims=True)
+	log_det = K.sum(K.log(sigma_ratio), 
+		axis=-1, 
+		keepdims=True)
 
 	return K.squeeze(0.5 * (trace_fac + 
 			mu_sq_diff - k - log_det), axis=-1)
@@ -80,110 +67,100 @@ def kullback_leibler_divergence(args):
 def build_hyperboloid_asym_model(num_attributes, 
 	embedding_dim, 
 	num_negative_samples, 
-	num_hidden=256,
+	num_hidden=128,
 	lr=1e-1):
 
-	input_transform = Dense(num_hidden,
-		# activation=exp_map_0,
-		activation="elu",
+	input_layer = Input((num_attributes,),
+		name="input_layer")
+
+	input_transform = Dense(
+		num_hidden,
+		activation="tanh",
+		kernel_initializer=initializer,
 		kernel_regularizer=regularizers.l2(reg),
 		bias_regularizer=regularizers.l2(reg),
-		# kernel_initializer=RandomUniform(-m, m),
-		trainable=True,
 		name="euclidean_transform",
-	)
+	)(input_layer)
 
-	# to_hyperboloid_1 = Lambda(lambda x: 
-	# 	exp_map_0(
-	# 		tf.pad(tf.verify_tensor_all_finite(x,"fail in map1"), 
-	# 			tf.constant([[0, 0]]*(len(x.shape)-1) + [[0, 1]]))
-	# ))
-
-	# hyperboloid_embedding_layer = HyperboloidFeedForwardLayer(
-	# 	embedding_dim, 
-	# 	# activation="tanh",
-	# 	name="hyperbolic_feedforward"
-	# )
-	
 	hyperboloid_embedding_layer = Dense(
 		embedding_dim, 
-		# activation=exp_map_0,
-		# kernel_initializer=RandomUniform(-m, m),
+		kernel_initializer=initializer,
 		kernel_regularizer=regularizers.l2(reg),
 		bias_regularizer=regularizers.l2(reg),
 		name="dense_to_hyperboloid",
-		trainable=True
-	)
+	)(input_transform)
 
 	to_hyperboloid = Lambda(lambda x: 
-		# tf.verify_tensor_all_finite(
-			exp_map_0(
-			tf.pad(
-				# tf.verify_tensor_all_finite(
-					x
-				# , "fail in map2")
-				, 
-				tf.constant([[0, 0]]*(len(x.shape)-1) + [[0, 1]]))),
-				# ,"fail after exp map")
+			exp_map_0(tf.pad(x,
+				tf.constant(
+					[[0, 0]]*(len(x.shape)-1) + [[0, 1]]))),
 		name="to_hyperboloid"
-	)
+	)(hyperboloid_embedding_layer)
 
-	# hyperboloid_shift = HyperboloidFeedForwardLayer(embedding_dim)
-
-	sigma_layer = Dense(embedding_dim, 
+	sigma_layer = Dense(
+		embedding_dim, 
 		activation=lambda x: K.elu(x) + 1.,
+		kernel_initializer=initializer,
 		kernel_regularizer=regularizers.l2(reg),
 		bias_regularizer=regularizers.l2(reg),
-		# kernel_initializer=RandomUniform(-m, m),
-		trainable=True,
 		name="dense_to_sigma"
-	)
+	)(input_transform)
 
-	embedder_input = Input(( num_attributes, ),
-		dtype=K.floatx(),
-		name="embedder_input")
+	# embedder_input = Input(( num_attributes, ),
+	# 	dtype=K.floatx(),
+	# 	name="embedder_input")
 
-	embedder_hyperboloid = to_hyperboloid(
-		hyperboloid_embedding_layer(
-		# to_hyperboloid_1(
-			input_transform(embedder_input)
-		# )
-	))
+	# embedder_hyperboloid = to_hyperboloid(
+	# 	hyperboloid_embedding_layer(
+	# 		input_transform(embedder_input)
+	# ))
 
-	embedder_sigmas = sigma_layer(
-		input_transform(embedder_input)
-	)
+	# embedder_sigmas = sigma_layer(
+	# 	input_transform(embedder_input)
+	# )
 
-	embedder_model = Model(embedder_input, 
-		[embedder_hyperboloid, embedder_sigmas],
+	embedder_model = Model(input_layer, 
+		[to_hyperboloid, sigma_layer],
 		name="embedder_model")
 
-	trainable_model_input = Input((1 + 1, 
-		num_attributes))
+	mus, sigmas = embedder_model(input_layer)
 
-	trainable_hyperboloid = to_hyperboloid(
-		hyperboloid_embedding_layer(
-		# to_hyperboloid_1(
-		input_transform(trainable_model_input)
-		# )
-	))
+	reshape = Lambda(lambda x: 
+		K.reshape(x, (-1, 2, K.int_shape(x)[-1])),
+		name="reshape")
+	
+	mus = reshape(mus)
+	sigmas = reshape(sigmas) 
 
-	trainable_sigmas = sigma_layer(
-		input_transform(trainable_model_input)
-	)
+	# mus = Reshape((-1, 2, embedding_dim+1))(mus)
+
+	# print (mus.shape)
+	# raise SystemExit
+
+	# trainable_model_input = Input((1 + 1 + 0, 
+	# 	num_attributes),
+	# 	name="trainable_model_input")
+
+	# trainable_hyperboloid = to_hyperboloid(
+	# 	hyperboloid_embedding_layer(
+	# 	input_transform(trainable_model_input)
+	# ))
+
+	# trainable_sigmas = sigma_layer(
+	# 	input_transform(trainable_model_input)
+	# )
 
 	mus = Lambda(map_to_tangent_space_mu_zero,
-		name="to_tangent_space_mu_zero")(trainable_hyperboloid)
+		name="to_tangent_space_mu_zero")(mus)
 
 	kds = Lambda(kullback_leibler_divergence,
-		name="kullback_leibler_layer")([mus, trainable_sigmas])
+		name="kullback_leibler_layer")([mus, sigmas])
 
-	trainable_model = Model(trainable_model_input, 
+	trainable_model = Model(input_layer, 
 		kds,
 		name="trainable_model")
 
-	# optimizer = ExponentialMappingOptimizer(lr=lr)
-	optimizer = "adam"
+	optimizer = AdamOptimizer()
 
 	trainable_model.compile(optimizer=optimizer, 
 		loss=asym_hyperbolic_loss(num_negative_samples),

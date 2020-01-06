@@ -6,6 +6,7 @@ headnet/metrics.py
 headnet/hyperbolic_feedforward.py
 headnet/poincare_layers.py
 headnet/node2vec_sampling.py
+headnet/optimizers_old.py
 walks
 embeddings
 *.png

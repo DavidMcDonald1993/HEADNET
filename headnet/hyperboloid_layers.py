@@ -71,7 +71,7 @@ def exponential_mapping( p, x ):
 
 	x = x / K.maximum(r, K.epsilon())
 
-	idx = tf.where(r > 0)[:,0]
+	idx = tf.where(r > K.epsilon())[:,0]
 
 	# clip
 	# r = K.minimum(r, 1e-0)
@@ -95,8 +95,6 @@ def exponential_mapping( p, x ):
 	# exp_map = tf.verify_tensor_all_finite(exp_map, "fail before normal")
 	exp_map = normalise_to_hyperboloid(exp_map) # account for floating point imprecision
 	# exp_map = tf.verify_tensor_all_finite(exp_map, "fail after normal")
-
-
 
 	return exp_map
 
@@ -152,14 +150,6 @@ def hyperboloid_initializer(shape, r_max=0.001):
 			x = K.concatenate([x, t], axis=-1)
 		return 1 / (1. - K.sum(K.square(X), axis=-1, keepdims=True)) * x
 
-	# def sphere_uniform_sample(shape, r_max):
-	# 	num_samples, dim = shape
-	# 	X = tf.random_normal(shape=shape, dtype=K.floatx())
-	# 	X_norm = K.sqrt(K.sum(K.square(X), axis=-1, keepdims=True))
-	# 	U = tf.random_uniform(shape=(num_samples, 1), dtype=K.floatx())
-	# 	return r_max * U ** (1./dim) * X / X_norm
-
-	# w = sphere_uniform_sample(shape, r_max=r_max)
 	w = tf.random_uniform(shape=shape, 
 		minval=-r_max, maxval=r_max, dtype=K.floatx())
 	return poincare_ball_to_hyperboloid(w)

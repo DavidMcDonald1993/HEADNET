@@ -15,8 +15,6 @@ import pandas as pd
 
 import pickle as pkl
 
-# from .node2vec_sampling import Graph 
-
 from multiprocessing.pool import Pool 
 
 import matplotlib.pyplot as plt
@@ -56,9 +54,12 @@ def load_data(args):
 			features = features.reindex(sorted(graph.nodes())).values
 			print ("no scaling applied")
 			# features = StandardScaler().fit_transform(features) # input features are standard scaled
-			# features = MinMaxScaler((-1, 1)).fit_transform(features) # input features are standard scaled
+			# features = MinMaxScaler((0, 1)).fit_transform(features) # input features are minmmax scaled
 		else:
 			raise Exception
+
+		from scipy.sparse import csr_matrix
+		features = csr_matrix(features)
 
 		print ("features shape is {}\n".format(features.shape))
 
@@ -131,6 +132,8 @@ def determine_positive_and_negative_samples(graph, args):
 		for k, ps in enumerate(positive_samples):
 			if k == 0:
 				continue
+			# if k == args.context_size:
+			# 	continue
 			nzx, nzy = np.nonzero(ps)
 			l.append(np.array((nzx, nzy, [k]*len(nzx))))
 		return np.concatenate(l, axis=1).T
@@ -146,36 +149,34 @@ def determine_positive_and_negative_samples(graph, args):
 				# neg_samples = counts * counts.T 
 				neg_samples = np.ones((N, N), ) #* np.exp(-(args.context_size+1))
 				neg_samples[
-						np.sum(positive_samples[:k+1], axis=0).nonzero()
-					] = 0
+					np.sum(positive_samples[:k+1], axis=0).nonzero()
+				] = 0
 				assert np.allclose(neg_samples.diagonal(), 0)
-				# neg_samples = np.zeros((N, N)) 
-				# neg_samples[np.sum(positive_samples[k+1:], axis=0).nonzero()] = 1
-				# for k_ in range(len(positive_samples)):
-				# 	if k_ <= k:
-				# 		p = 0
-				# 	else:
-				# 		p = np.exp(-k_)
-				# 	neg_samples[positive_samples[k_].nonzero()] = p
 			else:
 				neg_samples = np.zeros((N, N))
 				# neg_samples[positive_samples[k+1].nonzero()] = 1
-				neg_samples[np.sum(positive_samples[k+1:], axis=0).nonzero()] = 1
+				neg_samples[np.sum(positive_samples[k+1:], 
+					axis=0).nonzero()] = 1
 			neg_samples = neg_samples.flatten()
-			neg_samples /= neg_samples.sum()
+			neg_samples /= neg_samples.sum(axis=-1, keepdims=True)
 			neg_samples = neg_samples.cumsum(axis=-1)
-			assert np.allclose(neg_samples[-1], 1)
-			neg_samples[np.abs(neg_samples - neg_samples.max()) < 1e-15] = 1 
+			assert np.allclose(neg_samples[..., -1], 1)
+			neg_samples[np.abs(neg_samples - neg_samples.max(axis=-1, keepdims=True)) < 1e-15] = 1 
 			negative_samples.append(neg_samples)
+		
 		return negative_samples
 
-	positive_samples = build_positive_samples(graph, k=args.context_size)
+	positive_samples = build_positive_samples(graph, 
+		k=args.context_size)
 
 	negative_samples = build_negative_samples(positive_samples)
 
 	positive_samples = positive_samples_to_list(positive_samples)
 
-	print ("found {} positive sample pairs".format(len(positive_samples)))
+	# assert np.all(positive_samples[:,-1] < args.context_size)
+
+	print ("found {} positive sample pairs".format(
+			len(positive_samples)))
 	
 	return positive_samples, negative_samples
 

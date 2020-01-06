@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import argparse
 import random
 import numpy as np
@@ -33,7 +33,7 @@ config = tf.ConfigProto()
 config.gpu_options.allow_growth = True
  
 # Only allow a total of half the GPU memory to be allocated
-config.gpu_options.per_process_gpu_memory_fraction = 0.25
+config.gpu_options.per_process_gpu_memory_fraction = 0.5
 
 config.log_device_placement=False
 config.allow_soft_placement=True
@@ -81,8 +81,8 @@ def parse_args():
 		help="Number of negative samples for training (default is 10).")
 	parser.add_argument("--context-size", dest="context_size", type=int, default=1,
 		help="Context size for generating positive samples (default is 1).")
-	parser.add_argument("--patience", dest="patience", type=int, default=5,
-		help="The number of epochs of no improvement in loss before training is stopped. (Default is 5)")
+	parser.add_argument("--patience", dest="patience", type=int, default=3,
+		help="The number of epochs of no improvement in loss before training is stopped. (Default is 3)")
 
 	parser.add_argument("-d", "--dim", dest="embedding_dim", type=int,
 		help="Dimension of embeddings for each layer (default is 10).", default=10)
@@ -117,6 +117,8 @@ def main():
 
 	args.directed = True
 
+	assert args.context_size == 1
+
 	assert not (args.visualise and args.embedding_dim > 2), "Can only visualise two dimensions"
 	assert args.embedding_path is not None, "you must specify a path to save embedding"
 
@@ -129,10 +131,6 @@ def main():
 		node_labels = None
 	assert features is not None
 	print ("Loaded dataset")
-
-	assert not np.any(np.isnan(features))
-	assert not (features==0).all(1).any()
-	assert not (features==1).all(1).any()
 
 	if False:
 		plot_degree_dist(graph, "degree distribution")
@@ -179,7 +177,7 @@ def main():
 		args,
 		graph
 	)
-	
+
 	model.fit_generator(training_generator, 
 		workers=args.workers,
 		max_queue_size=10, 
@@ -192,6 +190,13 @@ def main():
 		callbacks=callbacks
 	)
 
+	# import matplotlib.pyplot as plt
+
+	# plt.scatter(np.arange(len(positive_samples)),
+	# 	training_generator.counts)
+	# plt.show()
+	# raise SystemExit
+
 	print ("Training complete")
 	embedding, sigmas = embedder.predict(features)
 	poincare_embedding = hyperboloid_to_poincare_ball(embedding)
@@ -199,11 +204,11 @@ def main():
 	print ("norm min", norms.min(), "norm max", norms.max())
 	print ("sigma min", sigmas.min(), "sigma max", sigmas.max())
 		
-	for w in model.get_weights():
-		if len(w.shape) == 1:
-			print (w)
-			print (np.linalg.norm(w))
-		print (w.shape, w.min(), w.max(), "\n")
+	# for w in model.get_weights():
+	# 	if len(w.shape) == 1:
+	# 		print (w)
+	# 		print (np.linalg.norm(w))
+	# 	print (w.shape, w.min(), w.max(), "\n")
 
 	embedding_filename = os.path.join(args.embedding_path,
 		"final_embedding.csv.gz")

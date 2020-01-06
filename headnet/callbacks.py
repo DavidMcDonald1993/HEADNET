@@ -9,21 +9,6 @@ from keras.callbacks import Callback
 
 from headnet.utils import hyperboloid_to_poincare_ball
 
-# def minkowski_dot(x, y):
-# 	assert len(x.shape) == len(y.shape) 
-# 	return np.sum(x[...,:-1] * y[...,:-1], axis=-1, keepdims=True) - x[...,-1:] * y[...,-1:]
-
-# def hyperbolic_distance_hyperboloid(x, y):
-# 	mink_dp = -minkowski_dot(x, y)
-# 	mink_dp = np.maximum(mink_dp, 1+1e-15)
-# 	return np.arccosh(mink_dp)
-
-# def elu(x, alpha=1.):
-# 	x = x.copy()
-# 	mask = x <= 0
-# 	x[mask] = alpha * (np.exp(x[mask]) - 1)
-# 	return x
-
 class Checkpointer(Callback):
 
 	def __init__(self, 
@@ -33,7 +18,7 @@ class Checkpointer(Callback):
 		model,
 		embedder,
 		features,
-		history=3
+		history=0
 		):
 		self.epoch = epoch
 		self.nodes = nodes
@@ -57,13 +42,6 @@ class Checkpointer(Callback):
 			os.remove(old_model_path)
 
 	def save_model(self):
-
-		# for w in self.model.get_weights():
-		# 	assert not np.any(np.isnan(w))
-		# 	if len(w.shape) == 1:
-		# 		print (w)
-		# 		print (np.linalg.norm(w))
-		# 	print (w.shape, w.min(), w.max(), "\n")
 
 		weights_filename = os.path.join(self.embedding_directory, 
 			"{:05d}_model.h5".format(self.epoch))
