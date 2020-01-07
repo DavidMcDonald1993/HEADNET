@@ -10,7 +10,6 @@ headnet/optimizers_old.py
 walks
 embeddings
 *.png
-datasets
 edgelists
 nodes
 sps
