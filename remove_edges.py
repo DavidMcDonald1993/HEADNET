@@ -46,12 +46,12 @@ def split_edges(graph,
 		
 		print ("determined cover")
 
-	# edges = [edge for edge in edges
-	# 	if edge not in cover] + cover
-	edges = filter(lambda edge: edge not in cover, edges)
-	
-	print ("filtered cover out of edges")
-	# edges = list(edges - cover) + list(cover)
+		# edges = [edge for edge in edges
+		# 	if edge not in cover] + cover
+		edges = filter(lambda edge: edge not in cover, edges)
+		
+		print ("filtered cover out of edges")
+		# edges = list(edges - cover) + list(cover)
 
 	# val_edges = edges[:num_val_edges]
 	# test_edges = edges[num_val_edges:num_val_edges+num_test_edges]

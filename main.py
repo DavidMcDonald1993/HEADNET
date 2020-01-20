@@ -6,7 +6,6 @@ import argparse
 import random
 import numpy as np
 import pandas as pd
-import glob
 
 from keras import backend as K
 
@@ -18,7 +17,7 @@ from keras.callbacks import TerminateOnNaN, EarlyStopping
 import tensorflow as tf
 
 from headnet.utils import hyperboloid_to_poincare_ball, load_data
-from headnet.utils import  determine_positive_and_negative_samples
+from headnet.utils import  determine_positive_and_negative_samples, load_weights
 from headnet.generators import TrainingDataGenerator
 from headnet.visualise import draw_graph, plot_degree_dist
 from headnet.callbacks import Checkpointer
@@ -41,19 +40,7 @@ config.allow_soft_placement=True
 # Create a session with the above options specified.
 K.tensorflow_backend.set_session(tf.Session(config=config))
 
-def load_weights(model, args):
 
-	previous_models = sorted(glob.glob(os.path.join(args.embedding_path, "*.h5")))
-	if len(previous_models) > 0:
-		weight_file = previous_models[-1]
-		initial_epoch = int(weight_file.split("/")[-1].split("_")[0])
-		print ("previous models found in directory -- loading from file {} and resuming from epoch {}".format(weight_file, initial_epoch))
-		model.load_weights(weight_file)
-	else:
-		print ("no previous model found in {}".format(args.embedding_path))
-		initial_epoch = 0
-
-	return model, initial_epoch
 
 def parse_args():
 	'''
@@ -98,9 +85,6 @@ def parse_args():
 	parser.add_argument('--visualise', action="store_true", 
 		help='flag to visualise embedding (embedding_dim must be 2)')
 
-	parser.add_argument("--training-nodes", dest="training_nodes",
-		help="Path to list of nodes to train on.")
-
 	args = parser.parse_args()
 	return args
 
@@ -128,10 +112,10 @@ def main():
 	np.random.seed(args.seed)
 	tf.set_random_seed(args.seed)
 
-	graph, features, node_labels = load_data(args)
+	graph, (features_train, features_all), node_labels = load_data(args)
 	if not args.visualise and node_labels is not None:
 		node_labels = None
-	assert features is not None
+	assert features_train is not None
 	print ("Loaded dataset")
 
 	if False:
@@ -143,20 +127,14 @@ def main():
 
 	nodes = sorted(graph.nodes())
 
-	if args.training_nodes:
-		print ("loading training nodes from", args.training_nodes)
-		training_nodes = pd.read_csv(args.training_nodes, index_col=0).values.flatten()
-		graph = graph.subgraph(training_nodes)
-
-
 	# build model
-	num_features = features.shape[1]
+	num_features = features_train.shape[1]
 	
 	embedder, model = build_hyperboloid_asym_model(num_features, 
 		args.embedding_dim, 
 		args.num_negative_samples, 
 		lr=args.lr)
-	model, initial_epoch = load_weights(model, args)
+	model, initial_epoch = load_weights(model, args.embedding_path)
 
 	model.summary()
 
@@ -171,16 +149,16 @@ def main():
 			embedding_directory=args.embedding_path,
 			model=model,
 			embedder=embedder,
-			features=features,
+			features=features_train,
 		)
 	]			
 
 	positive_samples, negative_samples = \
-			determine_positive_and_negative_samples(graph, args)
+		determine_positive_and_negative_samples(graph, args)
 
 	print ("Training with data generator with {} worker threads".format(args.workers))
 	training_generator = TrainingDataGenerator(
-		features,
+		features_train,
 		positive_samples,  
 		negative_samples,
 		model,
@@ -200,26 +178,14 @@ def main():
 		callbacks=callbacks
 	)
 
-	# import matplotlib.pyplot as plt
-
-	# plt.scatter(np.arange(len(positive_samples)),
-	# 	training_generator.counts)
-	# plt.show()
-	# raise SystemExit
-
 	print ("Training complete")
-	embedding, sigmas = embedder.predict(features)
+
+	embedding, sigmas = embedder.predict(features_all)
 	poincare_embedding = hyperboloid_to_poincare_ball(embedding)
 	norms = np.linalg.norm(poincare_embedding, axis=-1)
 	print ("norm min", norms.min(), "norm max", norms.max())
 	print ("sigma min", sigmas.min(), "sigma max", sigmas.max())
 		
-	# for w in model.get_weights():
-	# 	if len(w.shape) == 1:
-	# 		print (w)
-	# 		print (np.linalg.norm(w))
-	# 	print (w.shape, w.min(), w.max(), "\n")
-
 	embedding_filename = os.path.join(args.embedding_path,
 		"final_embedding.csv.gz")
 	print ("saving embedding to", embedding_filename)

@@ -10,7 +10,7 @@
 
 e=25
 
-datasets=({cora_ml,citeseer,pubmed})
+datasets=(cora_ml citeseer pubmed)
 dims=(2 5 10 25 50)
 seeds=({0..29})
 exps=(lp_experiment recon_experiment rn_experiment)

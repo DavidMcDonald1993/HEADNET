@@ -23,6 +23,9 @@ from collections import Counter
 
 from scipy.sparse import identity
 
+import glob
+
+
 def load_data(args):
 
 	edgelist_filename = args.edgelist
@@ -40,9 +43,6 @@ def load_data(args):
 	nx.set_edge_attributes(graph, name="weight", values={edge: abs(weight) 
 		for edge, weight in nx.get_edge_attributes(graph, name="weight").items()})
 
-	# graph = max(nx.strongly_connected_component_subgraphs(graph), key=len)
-	# graph = nx.convert_node_labels_to_integers(graph)
-
 	print ("number of nodes: {}\nnumber of edges: {}\n".format(len(graph), len(graph.edges())))
 
 	if features_filename is not None:
@@ -51,7 +51,8 @@ def load_data(args):
 
 		if features_filename.endswith(".csv"):
 			features = pd.read_csv(features_filename, index_col=0, sep=",")
-			features = features.reindex(sorted(graph.nodes())).values
+			features = [features.reindex(sorted(graph)).values, 
+				features.reindex(sorted(features.index)).values]
 			print ("no scaling applied")
 			# features = StandardScaler().fit_transform(features) # input features are standard scaled
 			# features = MinMaxScaler((0, 1)).fit_transform(features) # input features are minmmax scaled
@@ -59,9 +60,10 @@ def load_data(args):
 			raise Exception
 
 		from scipy.sparse import csr_matrix
-		features = csr_matrix(features)
+		features = tuple(map(csr_matrix, features))
 
-		print ("features shape is {}\n".format(features.shape))
+		print ("training features shape is {}".format(features[0].shape))
+		print ("all features shape is {}\n".format(features[1].shape))
 
 	else: 
 		features = None
@@ -86,12 +88,29 @@ def load_data(args):
 	else:
 		labels = None
 
+	graph = nx.convert_node_labels_to_integers(graph, ordering="sorted")
+
 	return graph, features, labels
 
 def load_embedding(embedding_filename):
 	assert embedding_filename.endswith(".csv.gz")
 	embedding_df = pd.read_csv(embedding_filename, index_col=0)
 	return embedding_df
+
+def load_weights(model, embedding_path):
+
+	previous_models = sorted(glob.glob(os.path.join(embedding_path, 
+		"*.h5")))
+	if len(previous_models) > 0:
+		weight_file = previous_models[-1]
+		initial_epoch = int(weight_file.split("/")[-1].split("_")[0])
+		print ("previous models found in directory -- loading from file {} and resuming from epoch {}".format(weight_file, initial_epoch))
+		model.load_weights(weight_file)
+	else:
+		print ("no previous model found in {}".format(embedding_path))
+		initial_epoch = 0
+
+	return model, initial_epoch
 
 def hyperboloid_to_poincare_ball(X):
 	return X[:,:-1] / (1 + X[:,-1,None])
@@ -143,18 +162,16 @@ def determine_positive_and_negative_samples(graph, args):
 		N = positive_samples[0].shape[0]
 		negative_samples = []
 
-		# counts = np.sum(positive_samples, axis=0).sum(axis=1).A
 		for k in range(len(positive_samples)):
 			if True or k == args.context_size:
-				# neg_samples = counts * counts.T 
-				neg_samples = np.ones((N, N), ) #* np.exp(-(args.context_size+1))
+				neg_samples = np.ones((N, N), )
 				neg_samples[
 					np.sum(positive_samples[:k+1], axis=0).nonzero()
 				] = 0
 				assert np.allclose(neg_samples.diagonal(), 0)
 			else:
+				assert False
 				neg_samples = np.zeros((N, N))
-				# neg_samples[positive_samples[k+1].nonzero()] = 1
 				neg_samples[np.sum(positive_samples[k+1:], 
 					axis=0).nonzero()] = 1
 			neg_samples = neg_samples.flatten()
