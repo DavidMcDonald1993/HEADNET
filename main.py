@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import argparse
 import random
 import numpy as np
@@ -12,7 +12,7 @@ from keras import backend as K
 K.set_floatx("float64")
 K.set_epsilon(np.float64(1e-15))
 
-from keras.callbacks import TerminateOnNaN, EarlyStopping
+from keras.callbacks import ModelCheckpoint, TerminateOnNaN, EarlyStopping
 
 import tensorflow as tf
 
@@ -22,6 +22,8 @@ from headnet.generators import TrainingDataGenerator
 from headnet.visualise import draw_graph, plot_degree_dist
 from headnet.callbacks import Checkpointer
 from headnet.models import build_hyperboloid_asym_model
+
+from evaluation_utils import hyperbolic_distance_hyperboloid, hyperbolic_distance_poincare
 
 np.set_printoptions(suppress=True)
 
@@ -138,12 +140,20 @@ def main():
 
 	model.summary()
 
+	best_model_path = os.path.join(args.embedding_path, 
+			"best_model.h5")
+
 	callbacks = [
 		TerminateOnNaN(),
 		EarlyStopping(monitor="loss", 
 			patience=args.patience, 
 			mode="min",
 			verbose=True),
+		ModelCheckpoint(best_model_path,
+			save_best_only=True,
+			save_weights_only=True,
+			monitor="loss",
+			mode="min"),
 		Checkpointer(epoch=initial_epoch, 
 			nodes=nodes, 
 			embedding_directory=args.embedding_path,
@@ -179,9 +189,16 @@ def main():
 	)
 
 	print ("Training complete")
+	if os.path.exists(best_model_path):
+		print ("Loading best model from", best_model_path)
+		model.load_weights(best_model_path)
+
+	print ("saving final embedding")
 
 	embedding, sigmas = embedder.predict(features_all)
 	poincare_embedding = hyperboloid_to_poincare_ball(embedding)
+	print ("embedding", np.linalg.norm(poincare_embedding.mean(0)))
+
 	norms = np.linalg.norm(poincare_embedding, axis=-1)
 	print ("norm min", norms.min(), "norm max", norms.max())
 	print ("sigma min", sigmas.min(), "sigma max", sigmas.max())
@@ -198,11 +215,66 @@ def main():
 	variance_df = pd.DataFrame(sigmas)
 	variance_df.to_csv(variance_filename)
 
+	from headnet.utils import minkowski_dot
+
+	centroid = embedding.sum(0, keepdims=True)
+	centroid /= np.sqrt(-minkowski_dot(centroid, centroid))
+	assert np.allclose(minkowski_dot(centroid, centroid), -1)
+
+
+	dists_hyperboloid = hyperbolic_distance_hyperboloid(embedding)
+	embedding_poincare = hyperboloid_to_poincare_ball(embedding)
+	dists_poincare = hyperbolic_distance_poincare(embedding_poincare)
+
+	assert np.allclose(dists_hyperboloid, dists_poincare, atol=1e-6)
+
+
+	centroid_poincare = hyperboloid_to_poincare_ball(centroid)
+
+	print (centroid_poincare)
+
+	# def mobius_add( x, y, c=1):
+	# 	assert len(x.shape) == len(y.shape)
+	# 	xy = np.sum(x * y, axis=-1, keepdims=True)
+	# 	x2 = np.sum(x**2, axis=-1, keepdims=True)
+	# 	y2 = np.sum(y**2, axis=-1, keepdims=True)
+	# 	uu = (1 + 2 * c * xy + c * y2) * x + (1 - c * x2) * y
+	# 	dd = 1 + 2 * c * xy + c ** 2 * x2 * y2
+	# 	dd = np.maximum(dd, 1e-15)
+	# 	return uu / dd
+
+	def circle_inversion(x, v):
+		# v goes to origin
+		assert len(x.shape) == len(v.shape)
+		xv = np.sum(x * v, axis=-1, keepdims=True)
+		x2 = np.sum(x**2, axis=-1, keepdims=True)
+		v2 = np.sum(v**2, axis=-1, keepdims=True)
+
+		uu = (1 + 2 * xv + x2) * v + (1 - v2) * x
+		dd = 1 + 2 * xv + v2 * x2 
+		
+		dd = np.maximum(dd, 1e-15)
+		return uu / dd
+
+	print (circle_inversion(centroid_poincare, -centroid_poincare))
+	# raise SystemExit
+
+	poincare_embedding_shifted = circle_inversion(poincare_embedding, -centroid_poincare)
+
+	shifted_dists = hyperbolic_distance_poincare(poincare_embedding_shifted)
+
+	assert np.allclose(dists_poincare, shifted_dists, atol=1e-6)
+
 	if args.visualise:
 		draw_graph(graph,
 			poincare_embedding, 
 			node_labels, 
 			path="2d-poincare-disk-visualisation.png")
+		draw_graph(graph,
+			poincare_embedding_shifted, 
+			node_labels, 
+			path="2d-poincare-disk-visualisation-shifted.png")
+
 
 if __name__ == "__main__":
 	main()

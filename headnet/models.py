@@ -1,10 +1,10 @@
 import keras.backend as K
 import tensorflow as tf 
-from keras.layers import Input, Dense, Activation, Lambda, Reshape
+from keras.layers import Input, Dense, Activation, Lambda, Reshape, BatchNormalization
 from keras.models import Model
 from keras.initializers  import RandomUniform
 from keras import regularizers
-from tensorflow.train import AdamOptimizer
+from tensorflow.train import AdamOptimizer, GradientDescentOptimizer
 
 
 from headnet.losses import asym_hyperbolic_loss
@@ -12,8 +12,8 @@ from headnet.optimizers import ExponentialMappingOptimizer
 from headnet.hyperboloid_layers import logarithmic_map, parallel_transport, exp_map_0
 from headnet.hyperboloid_layers import HyperboloidFeedForwardLayer
 
-reg = 0e-3
-initializer="glorot_uniform"#RandomUniform(-1e-5, 1e-5)
+reg = 1e-3
+initializer=RandomUniform(-1e-3, 1e-3)
 
 def map_to_tangent_space_mu_zero(mus):
 
@@ -84,6 +84,7 @@ def build_hyperboloid_asym_model(num_attributes,
 
 	hyperboloid_embedding_layer = Dense(
 		embedding_dim, 
+		# activation="tanh",
 		kernel_initializer=initializer,
 		kernel_regularizer=regularizers.l2(reg),
 		bias_regularizer=regularizers.l2(reg),
@@ -93,7 +94,7 @@ def build_hyperboloid_asym_model(num_attributes,
 	to_hyperboloid = Lambda(lambda x: 
 			exp_map_0(tf.pad(x,
 				tf.constant(
-					[[0, 0]]*(len(x.shape)-1) + [[0, 1]]))),
+			[[0, 0]]*(len(x.shape)-1) + [[0, 1]]))),
 		name="to_hyperboloid"
 	)(hyperboloid_embedding_layer)
 
@@ -105,19 +106,6 @@ def build_hyperboloid_asym_model(num_attributes,
 		bias_regularizer=regularizers.l2(reg),
 		name="dense_to_sigma"
 	)(input_transform)
-
-	# embedder_input = Input(( num_attributes, ),
-	# 	dtype=K.floatx(),
-	# 	name="embedder_input")
-
-	# embedder_hyperboloid = to_hyperboloid(
-	# 	hyperboloid_embedding_layer(
-	# 		input_transform(embedder_input)
-	# ))
-
-	# embedder_sigmas = sigma_layer(
-	# 	input_transform(embedder_input)
-	# )
 
 	embedder_model = Model(input_layer, 
 		[to_hyperboloid, sigma_layer],
@@ -131,24 +119,6 @@ def build_hyperboloid_asym_model(num_attributes,
 	
 	mus = reshape(mus)
 	sigmas = reshape(sigmas) 
-
-	# mus = Reshape((-1, 2, embedding_dim+1))(mus)
-
-	# print (mus.shape)
-	# raise SystemExit
-
-	# trainable_model_input = Input((1 + 1 + 0, 
-	# 	num_attributes),
-	# 	name="trainable_model_input")
-
-	# trainable_hyperboloid = to_hyperboloid(
-	# 	hyperboloid_embedding_layer(
-	# 	input_transform(trainable_model_input)
-	# ))
-
-	# trainable_sigmas = sigma_layer(
-	# 	input_transform(trainable_model_input)
-	# )
 
 	mus = Lambda(map_to_tangent_space_mu_zero,
 		name="to_tangent_space_mu_zero")(mus)

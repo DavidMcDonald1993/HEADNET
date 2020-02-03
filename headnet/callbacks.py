@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import re
 import os
 import glob
 import numpy as np
@@ -37,10 +38,16 @@ class Checkpointer(Callback):
 		self.save_model()
 
 	def remove_old_models(self):
-		for old_model_path in sorted(glob.glob(os.path.join(self.embedding_directory, 
-			"*.h5"))):
+		embedding_directory = self.embedding_directory
+		# for old_model_path in sorted(
+		# 	glob.iglob(os.path.join(self.embedding_directory, 
+		# 		"[0-9]+_model.h5"))):
+		for old_model_path in filter(
+			re.compile("[0-9]+\_model\.h5").match, 
+			os.listdir(embedding_directory)):
 			print ("removing model: {}".format(old_model_path))
-			os.remove(old_model_path)
+			os.remove(os.path.join(embedding_directory, 
+				old_model_path))
 
 	def save_model(self):
 
@@ -49,25 +56,30 @@ class Checkpointer(Callback):
 		self.model.save_weights(weights_filename)
 		print ("saving weights to", weights_filename)
 		
-		# embedding, variance = self.embedder.predict(self.features)
+		embedding, variance = self.embedder.predict(self.features)
 
-		# embedding_filename = os.path.join(self.embedding_directory, 
-		# 	"{:05d}_embedding.csv.gz".format(self.epoch))
+		embedding = hyperboloid_to_poincare_ball(embedding)
+		print ("embedding", np.linalg.norm(embedding.mean(0)))
+		ranks = np.linalg.norm(embedding, axis=-1)
+		print ("ranks", ranks.min(), ranks.mean(),
+			ranks.max() )
 		# assert not np.any(np.isnan(embedding))
 		# assert not np.any(np.isinf(embedding))
-		# print ("saving current embedding to {}".format(embedding_filename))
+		# assert (embedding[:,-1] > 0).all(), embedding[:,-1]
+		# assert np.allclose(minkowski_dot(embedding, embedding), -1)
 
+		# print ("saving current embedding to {}".\
+		# 	format(embedding_filename))
 		# embedding_df = pd.DataFrame(embedding, index=self.nodes)
-		# embedding_df.to_csv(embedding_filename)
-
-		# poincare_embedding = hyperboloid_to_poincare_ball(embedding)
-		# norm = np.linalg.norm(poincare_embedding, axis=-1)
-		# print ("min norm", norm.min(), "max_norm", norm.max())
+		# embedding_df.to_csv(embedding_filename, compression="gzip")
 
 		# variance_filename = os.path.join(self.embedding_directory, 
 		# 	"{:05d}_variance.csv.gz".format(self.epoch))
-		# print ("variance min:", variance.min(), "variance max:", variance.max())
+		print ("variance", variance.min(),
+			variance.mean(), variance.max())
 
-		# print ("saving current variance to {}".format(variance_filename))
+		# print ("saving current variance to {}".\
+		# 	format(variance_filename))
 		# variance_df = pd.DataFrame(variance, index=self.nodes)
-		# variance_df.to_csv(variance_filename)
+		# variance_df.to_csv(variance_filename, compression="gzip")
+		# print()

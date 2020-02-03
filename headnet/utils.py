@@ -1,5 +1,6 @@
 from __future__ import print_function
 
+import re
 import os
 import fcntl
 import functools
@@ -54,8 +55,10 @@ def load_data(args):
 			features = [features.reindex(sorted(graph)).values, 
 				features.reindex(sorted(features.index)).values]
 			print ("no scaling applied")
-			# features = StandardScaler().fit_transform(features) # input features are standard scaled
-			# features = MinMaxScaler((0, 1)).fit_transform(features) # input features are minmmax scaled
+			# scaler = StandardScaler()
+			# scaler.fit(features[0])
+			# features = list(map(scaler.transform,
+			# 	features))
 		else:
 			raise Exception
 
@@ -97,17 +100,24 @@ def load_embedding(embedding_filename):
 	embedding_df = pd.read_csv(embedding_filename, index_col=0)
 	return embedding_df
 
-def load_weights(model, embedding_path):
+def load_weights(model, embedding_directory):
 
-	previous_models = sorted(glob.glob(os.path.join(embedding_path, 
-		"*.h5")))
+	# previous_models = sorted(glob.glob(
+	# 	os.path.join(args.embedding_path, "*.h5")))
+	previous_models = sorted(filter(
+		re.compile("[0-9]+\_model\.h5").match, 
+		os.listdir(embedding_directory)
+	))
 	if len(previous_models) > 0:
 		weight_file = previous_models[-1]
-		initial_epoch = int(weight_file.split("/")[-1].split("_")[0])
+		initial_epoch = int(weight_file.split("_")[0])
 		print ("previous models found in directory -- loading from file {} and resuming from epoch {}".format(weight_file, initial_epoch))
-		model.load_weights(weight_file)
+		model.load_weights(
+			os.path.join(embedding_directory, 
+			weight_file))
 	else:
-		print ("no previous model found in {}".format(embedding_path))
+		print ("no previous model found in {}".\
+			format(embedding_directory))
 		initial_epoch = 0
 
 	return model, initial_epoch
@@ -123,6 +133,14 @@ def poincare_ball_to_hyperboloid(X):
 	t = 1. + np.sum(np.square(X), axis=-1, keepdims=True)
 	x = np.concatenate([x, t], axis=-1)
 	return 1 / (1. - np.sum(np.square(X), axis=-1, keepdims=True)) * x
+
+def minkowski_dot(x, y):
+	assert len(x.shape) == len(y.shape)
+	return (np.sum(x[...,:-1] * y[...,:-1], axis=-1, keepdims=True) 
+		- x[...,-1:] * y[...,-1:])
+
+def minkowski_norm(x):
+	return np.sqrt( np.maximum(minkowski_dot(x, x), 0.) )
 
 def determine_positive_and_negative_samples(graph, args):
 

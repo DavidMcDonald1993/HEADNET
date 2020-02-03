@@ -36,30 +36,8 @@ class TrainingDataGenerator(Sequence):
 		self.N = len(graph)
 		self.context_size = args.context_size
 		
-		# self.counts = np.zeros(len(self.positive_samples))
-		# self.counts = np.zeros((self.N, self.N))
-
-		# self.sps = nx.floyd_warshall_numpy(self.graph, 
-		# 	nodelist=sorted(self.graph))
 
 		print ("Built generator")
-
-	# def get_training_sample(self, batch_positive_samples):
-	# 	num_negative_samples = self.num_negative_samples
-	# 	probs = self.probs
-
-	# 	batch_negative_samples = np.array([
-	# 		samples +
-	# 		random.choices(self.negative_samples[samples[0]],
-	# 			k=num_negative_samples-(len(samples)-1))
-	# 		for samples in batch_positive_samples
-	# 	],
-	# 	dtype=np.int64)
-
-
-	# 	batch_nodes = batch_negative_samples
-
-	# 	return batch_nodes
 
 	def __len__(self):
 		return 1000
@@ -83,7 +61,6 @@ class TrainingDataGenerator(Sequence):
 			k=batch_size)
 		batch_positive_samples = positive_samples[idx]
 
-		# self.counts[idx] += 1
 
 		###############################################
 
@@ -127,25 +104,44 @@ class TrainingDataGenerator(Sequence):
 
 		#######################
 
-		batch_negative_samples = np.concatenate([
-			np.unravel_index(np.searchsorted(
-				negative_samples[1], 
-				np.random.uniform(
-					size=len(batch_positive_samples)*num_negative_samples)),
-				# [random.random() 
-				# 	for _ in range(batch_size * num_negative_samples)]),
-				shape=(N, N))
-		], axis=1).T
+		assert self.context_size == 1
 
-		training_sample = np.empty(
-			(len(batch_positive_samples) + \
-				len(batch_negative_samples), 2), dtype=int)
-		training_sample[::num_negative_samples + 1] = \
-			batch_positive_samples[:,:-1]
 
-		for i in range(num_negative_samples):
-			training_sample[i+1::num_negative_samples+1] = \
-				batch_negative_samples[i::num_negative_samples]
+		# batch_negative_samples = np.concatenate([
+		# 	np.unravel_index(np.searchsorted(
+		# 		negative_samples[1], 
+		# 		np.random.uniform(
+		# 			size=len(batch_positive_samples)*num_negative_samples)),
+		# 		# [random.random() 
+		# 		# 	for _ in range(batch_size * num_negative_samples)]),
+		# 		shape=(N, N))
+		# ], axis=1).T
+
+		# training_sample = np.empty(
+		# 	(len(batch_positive_samples) + \
+		# 		len(batch_negative_samples), 2), dtype=int)
+		# training_sample[::num_negative_samples + 1] = \
+		# 	batch_positive_samples[:,:-1]
+
+		# for i in range(num_negative_samples):
+		# 	training_sample[i+1::num_negative_samples+1] = \
+		# 		batch_negative_samples[i::num_negative_samples]
+
+
+		batch_negative_samples = np.column_stack(
+			np.unravel_index(np.searchsorted(negative_samples[1], 
+				np.random.rand(batch_size * num_negative_samples)),
+				shape=(N, N)), )
+
+		batch_positive_samples = np.expand_dims(
+			batch_positive_samples[:,:-1], axis=1)
+		batch_negative_samples = batch_negative_samples.reshape(
+			batch_size, num_negative_samples, 2)
+
+		training_sample = np.concatenate(
+			(batch_positive_samples, batch_negative_samples), 
+			axis=1).reshape(batch_size*(num_negative_samples+1), 2)
+
 
 		# assert np.all(training_sample >= 0)
 
