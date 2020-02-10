@@ -13,7 +13,7 @@ from headnet.hyperboloid_layers import logarithmic_map, parallel_transport, exp_
 from headnet.hyperboloid_layers import HyperboloidFeedForwardLayer
 
 reg = 1e-3
-initializer=RandomUniform(-1e-3, 1e-3)
+# initializer=RandomUniform(-1e-3, 1e-3)
 
 def map_to_tangent_space_mu_zero(mus):
 
@@ -76,7 +76,7 @@ def build_hyperboloid_asym_model(num_attributes,
 	input_transform = Dense(
 		num_hidden,
 		activation="tanh",
-		kernel_initializer=initializer,
+		# kernel_initializer=initializer,
 		kernel_regularizer=regularizers.l2(reg),
 		bias_regularizer=regularizers.l2(reg),
 		name="euclidean_transform",
@@ -85,7 +85,7 @@ def build_hyperboloid_asym_model(num_attributes,
 	hyperboloid_embedding_layer = Dense(
 		embedding_dim, 
 		# activation="tanh",
-		kernel_initializer=initializer,
+		# kernel_initializer=initializer,
 		kernel_regularizer=regularizers.l2(reg),
 		bias_regularizer=regularizers.l2(reg),
 		name="dense_to_hyperboloid",
@@ -101,7 +101,7 @@ def build_hyperboloid_asym_model(num_attributes,
 	sigma_layer = Dense(
 		embedding_dim, 
 		activation=lambda x: K.elu(x) + 1.,
-		kernel_initializer=initializer,
+		# kernel_initializer=initializer,
 		kernel_regularizer=regularizers.l2(reg),
 		bias_regularizer=regularizers.l2(reg),
 		name="dense_to_sigma"

@@ -101,6 +101,7 @@ def configure_paths(args):
 
 def main():
 
+
 	args = parse_args()
 
 	args.directed = True
@@ -215,55 +216,40 @@ def main():
 	variance_df = pd.DataFrame(sigmas)
 	variance_df.to_csv(variance_filename)
 
-	from headnet.utils import minkowski_dot
+	# from headnet.utils import minkowski_dot
 
-	centroid = embedding.sum(0, keepdims=True)
-	centroid /= np.sqrt(-minkowski_dot(centroid, centroid))
-	assert np.allclose(minkowski_dot(centroid, centroid), -1)
+	# centroid = embedding.sum(0, keepdims=True)
+	# centroid /= np.sqrt(-minkowski_dot(centroid, centroid))
+	# assert np.allclose(minkowski_dot(centroid, centroid), -1)
 
+	# dists_hyperboloid = hyperbolic_distance_hyperboloid(embedding)
+	# embedding_poincare = hyperboloid_to_poincare_ball(embedding)
+	# dists_poincare = hyperbolic_distance_poincare(embedding_poincare)
 
-	dists_hyperboloid = hyperbolic_distance_hyperboloid(embedding)
-	embedding_poincare = hyperboloid_to_poincare_ball(embedding)
-	dists_poincare = hyperbolic_distance_poincare(embedding_poincare)
+	# assert np.allclose(dists_hyperboloid, 
+	# 	dists_poincare, atol=1e-4), (dists_hyperboloid[:5, :5],
+	# 	dists_poincare[:5, :5])
 
-	assert np.allclose(dists_hyperboloid, dists_poincare, atol=1e-6)
+	# centroid_poincare = hyperboloid_to_poincare_ball(centroid)
 
-
-	centroid_poincare = hyperboloid_to_poincare_ball(centroid)
-
-	print (centroid_poincare)
-
-	# def mobius_add( x, y, c=1):
-	# 	assert len(x.shape) == len(y.shape)
-	# 	xy = np.sum(x * y, axis=-1, keepdims=True)
+	# def circle_inversion(x, v):
+	# 	# v goes to origin
+	# 	assert len(x.shape) == len(v.shape)
+	# 	xv = np.sum(x * v, axis=-1, keepdims=True)
 	# 	x2 = np.sum(x**2, axis=-1, keepdims=True)
-	# 	y2 = np.sum(y**2, axis=-1, keepdims=True)
-	# 	uu = (1 + 2 * c * xy + c * y2) * x + (1 - c * x2) * y
-	# 	dd = 1 + 2 * c * xy + c ** 2 * x2 * y2
+	# 	v2 = np.sum(v**2, axis=-1, keepdims=True)
+
+	# 	uu = (1 + 2 * xv + x2) * v + (1 - v2) * x
+	# 	dd = 1 + 2 * xv + v2 * x2 
+		
 	# 	dd = np.maximum(dd, 1e-15)
 	# 	return uu / dd
 
-	def circle_inversion(x, v):
-		# v goes to origin
-		assert len(x.shape) == len(v.shape)
-		xv = np.sum(x * v, axis=-1, keepdims=True)
-		x2 = np.sum(x**2, axis=-1, keepdims=True)
-		v2 = np.sum(v**2, axis=-1, keepdims=True)
+	# poincare_embedding_shifted = circle_inversion(poincare_embedding, -centroid_poincare)
 
-		uu = (1 + 2 * xv + x2) * v + (1 - v2) * x
-		dd = 1 + 2 * xv + v2 * x2 
-		
-		dd = np.maximum(dd, 1e-15)
-		return uu / dd
+	# shifted_dists = hyperbolic_distance_poincare(poincare_embedding_shifted)
 
-	print (circle_inversion(centroid_poincare, -centroid_poincare))
-	# raise SystemExit
-
-	poincare_embedding_shifted = circle_inversion(poincare_embedding, -centroid_poincare)
-
-	shifted_dists = hyperbolic_distance_poincare(poincare_embedding_shifted)
-
-	assert np.allclose(dists_poincare, shifted_dists, atol=1e-6)
+	# assert np.allclose(dists_poincare, shifted_dists, atol=1e-4)
 
 	if args.visualise:
 		draw_graph(graph,

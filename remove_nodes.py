@@ -16,16 +16,16 @@ def split_nodes(nodes,
 	val_split=0.05, 
 	test_split=0.10, ):
 
-	num_val_edges = int(np.ceil(len(nodes) * val_split))
-	num_test_edges = int(np.ceil(len(nodes) * test_split))
+	num_val_nodes = int(np.ceil(len(nodes) * val_split))
+	num_test_nodes = int(np.ceil(len(nodes) * test_split))
 
 	np.random.seed(seed)
 
 	nodes = np.random.permutation(nodes)
 
-	val_nodes = nodes[:num_val_edges]
-	test_nodes = nodes[num_val_edges:num_val_edges+num_test_edges]
-	train_nodes = nodes[num_val_edges+num_test_edges:]
+	val_nodes = nodes[:num_val_nodes]
+	test_nodes = nodes[num_val_nodes:num_val_nodes+num_test_nodes]
+	train_nodes = nodes[num_val_nodes+num_test_nodes:]
 
 	return train_nodes, val_nodes, test_nodes
 
@@ -33,7 +33,7 @@ def parse_args():
 	'''
 	parse args from the command line
 	'''
-	parser = argparse.ArgumentParser(description="Script to remove edges for link prediction experiments")
+	parser = argparse.ArgumentParser(description="Script to remove nodes for link prediction experiments")
 
 	parser.add_argument("--edgelist", dest="edgelist", type=str, 
 		help="edgelist to load.")
@@ -60,18 +60,6 @@ def main():
 
 	seed= args.seed
 	random.seed(seed)
-	# output_dir = os.path.join(args.output, 
-	# 	"seed={:03d}".format(seed),)
-
-	# if not os.path.exists(output_dir):
-	# 	os.makedirs(output_dir, exist_ok=True)
-
-	# training_nodes_fn = os.path.join(output_dir, 
-	# 	"nodes_train.csv")
-	# val_nodes_fn = os.path.join(output_dir, 
-	# 	"nodes_val.csv")
-	# test_nodes_fn = os.path.join(output_dir, 
-	# 	"nodes_test.csv")
 
 	training_edgelist_dir = os.path.join(args.output, 
 		"seed={:03d}".format(seed), "training_edges")
@@ -85,10 +73,6 @@ def main():
 
 	training_edgelist_fn = os.path.join(training_edgelist_dir, 
 		"edgelist.tsv")
-	# val_nodes_fn = os.path.join(removed_nodes_dir, 
-	# 	"nodes_val.csv")
-	# test_nodes_fn = os.path.join(removed_nodes_dir, 
-	# 	"nodes_test.csv")
 
 	val_edgelist_fn = os.path.join(removed_edges_dir, 
 		"val_edges.tsv")
