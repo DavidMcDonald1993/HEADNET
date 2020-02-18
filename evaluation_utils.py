@@ -268,7 +268,7 @@ def evaluate_mean_average_precision(scores,
 		true_neighbours = edgelist_dict[u]
 		labels = np.array([n in true_neighbours 
 			for n in range(N)])
-		mask = np.array([n!=u
+		mask = np.array([n!=u or n in true_neighbours
 			for n in range(N)]) # ignore self loops
 		if graph_edges and u in graph_edgelist_dict:
 			mask *= np.array([n not in graph_edgelist_dict[u]
@@ -362,6 +362,14 @@ def save_test_results(filename, seed, data, ):
 
 def threadsafe_save_test_results(lock_filename, filename, seed, data):
 	threadsafe_fn(lock_filename, save_test_results, filename=filename, seed=seed, data=data)
+	
+def check_complete(test_results_filename, seed):
+	if os.path.exists(test_results_filename):
+		existing_results = pd.read_csv(test_results_filename, index_col=0)
+		if seed in existing_results.index:
+			print (test_results_filename, ": seed=", seed, "complete --terminating")
+			return True 
+	return False
 
 
 

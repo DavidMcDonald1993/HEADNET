@@ -7,7 +7,7 @@ import networkx as nx
 import argparse
 
 from headnet.utils import load_data
-from evaluation_utils import load_embedding, compute_scores, evaluate_rank_AUROC_AP, evaluate_mean_average_precision, evaluate_precision_at_k, touch, threadsafe_save_test_results, read_edgelist
+from evaluation_utils import check_complete, load_embedding, compute_scores, evaluate_rank_AUROC_AP, evaluate_mean_average_precision, evaluate_precision_at_k, touch, threadsafe_save_test_results, read_edgelist
 
 def parse_args():
 
@@ -37,15 +37,24 @@ def parse_args():
 
 	return parser.parse_args()
 
-def elu(x, alpha=1.):
-	x = x.copy()
-	mask = x <= 0
-	x[mask] = alpha * (np.exp(x[mask]) - 1)
-	return x
-
 def main():
 
 	args = parse_args()
+
+
+	test_results_dir = args.test_results_dir
+	if not os.path.exists(test_results_dir):
+		os.makedirs(test_results_dir, exist_ok=True)
+	test_results_filename = os.path.join(test_results_dir, 
+		"test_results.csv")
+
+	if check_complete(test_results_filename, args.seed):
+		return
+
+	test_results_lock_filename = os.path.join(test_results_dir, 
+		"test_results.lock")
+	touch(test_results_lock_filename)
+
 
 	args.directed = True
 
@@ -96,14 +105,14 @@ def main():
 
 	test_results.update({"map_lp": map_lp})
 
-	test_results_dir = args.test_results_dir
-	if not os.path.exists(test_results_dir):
-		os.makedirs(test_results_dir, exist_ok=True)
-	test_results_filename = os.path.join(test_results_dir, 
-		"test_results.csv")
-	test_results_lock_filename = os.path.join(test_results_dir, 
-		"test_results.lock")
-	touch(test_results_lock_filename)
+	# test_results_dir = args.test_results_dir
+	# if not os.path.exists(test_results_dir):
+	# 	os.makedirs(test_results_dir, exist_ok=True)
+	# test_results_filename = os.path.join(test_results_dir, 
+	# 	"test_results.csv")
+	# test_results_lock_filename = os.path.join(test_results_dir, 
+	# 	"test_results.lock")
+	# touch(test_results_lock_filename)
 
 	print ("saving test results to {}".format(test_results_filename))
 
