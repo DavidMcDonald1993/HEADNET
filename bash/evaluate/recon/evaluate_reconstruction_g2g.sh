@@ -34,7 +34,7 @@ seed=${seeds[$seed_id]}
 k=${ks[$k_id]}
 
 data_dir=datasets/${dataset}
-edgelist=${data_dir}/edgelist.tsv
+edgelist=${data_dir}/edgelist.tsv.gz
 embedding_dir=../graph2gauss/embeddings/${dataset}/feats/${exp}
 embedding_dir=$(printf "${embedding_dir}/scale=${scale}/k=${k}/seed=%03d/dim=%03d/" ${seed} ${dim})
 

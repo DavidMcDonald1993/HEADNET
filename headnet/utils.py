@@ -22,7 +22,7 @@ import matplotlib.pyplot as plt
 
 from collections import Counter
 
-from scipy.sparse import identity
+from scipy.sparse import identity, csr_matrix, load_npz
 
 import glob
 
@@ -50,7 +50,7 @@ def load_data(args):
 
 		print ("loading features from {}".format(features_filename))
 
-		if features_filename.endswith(".csv"):
+		if features_filename.endswith(".csv") or features_filename.endswith(".csv.gz"):
 			features = pd.read_csv(features_filename, index_col=0, sep=",")
 			features = [features.reindex(sorted(graph)).values, 
 				features.reindex(sorted(features.index)).values]
@@ -59,11 +59,18 @@ def load_data(args):
 			# scaler.fit(features[0])
 			# features = list(map(scaler.transform,
 			# 	features))
+			features = tuple(map(csr_matrix, features))
+
+		elif features_filename.endswith(".npz"):
+			
+			features = load_npz(features_filename)
+			assert isinstance(features, csr_matrix)
+
+			features = (features[sorted(graph)], features)
+
 		else:
 			raise Exception
 
-		from scipy.sparse import csr_matrix
-		features = tuple(map(csr_matrix, features))
 
 		print ("training features shape is {}".format(features[0].shape))
 		print ("all features shape is {}\n".format(features[1].shape))
@@ -75,14 +82,15 @@ def load_data(args):
 
 		print ("loading labels from {}".format(labels_filename))
 
-		if labels_filename.endswith(".csv"):
+		if labels_filename.endswith(".csv") or labels_filename.endswith(".csv.gz"):
 			labels = pd.read_csv(labels_filename, index_col=0, sep=",")
 			labels = labels.reindex(sorted(graph.nodes())).values.astype(int)#.flatten()
 			assert len(labels.shape) == 2
 		elif labels_filename.endswith(".pkl"):
 			with open(labels_filename, "rb") as f:
 				labels = pkl.load(f)
-			labels = np.array([labels[n] for n in sorted(graph.nodes())], dtype=np.int)
+			labels = np.array([labels[n] 
+				for n in sorted(graph.nodes())], dtype=np.int)
 		else:
 			raise Exception
 
@@ -169,8 +177,6 @@ def determine_positive_and_negative_samples(graph, args):
 		for k, ps in enumerate(positive_samples):
 			if k == 0:
 				continue
-			# if k == args.context_size:
-			# 	continue
 			nzx, nzy = np.nonzero(ps)
 			l.append(np.array((nzx, nzy, [k]*len(nzx))))
 		return np.concatenate(l, axis=1).T
@@ -182,7 +188,7 @@ def determine_positive_and_negative_samples(graph, args):
 
 		for k in range(len(positive_samples)):
 			if True or k == args.context_size:
-				neg_samples = np.ones((N, N), )
+				neg_samples = np.ones((N, N), dtype=bool )
 				neg_samples[
 					np.sum(positive_samples[:k+1], axis=0).nonzero()
 				] = 0

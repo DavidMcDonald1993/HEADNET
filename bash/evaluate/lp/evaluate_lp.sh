@@ -26,7 +26,7 @@ dim=${dims[$dim_id]}
 seed=${seeds[$seed_id]}
 
 data_dir=datasets/${dataset}
-edgelist=${data_dir}/edgelist.tsv
+edgelist=${data_dir}/edgelist.tsv.gz
 embedding_dir=embeddings/${dataset}/${exp}
 output=edgelists/${dataset}
 

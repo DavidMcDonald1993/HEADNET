@@ -40,10 +40,10 @@ elif [ $exp == "rn_experiment" ]
 then 
     edgelist=$(printf nodes/${dataset}/seed=%03d/training_edges/edgelist.tsv ${seed})
 else 
-    edgelist=${data_dir}/edgelist.tsv
+    edgelist=${data_dir}/edgelist.tsv.gz
 fi
 echo edgelist is $edgelist
-features=${data_dir}/feats.csv
+features=${data_dir}/feats.csv.gz
 
 embedding_dir=embeddings/${dataset}/$exp
 embedding_dir=$(printf "${embedding_dir}/seed=%03d/dim=%03d" ${seed} ${dim})

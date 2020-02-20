@@ -14,6 +14,8 @@ edgelists
 nodes
 sps
 notes
-jupyter_notebook
+jupyter_notebooks
 __pycache__
 headnet/__pycache__
+headnet/*.pyc
+datasets/twitter/feats.csv.gz

@@ -34,7 +34,7 @@ seed=${seeds[$seed_id]}
 k=${ks[$k_id]}
 
 data_dir=datasets/${dataset}
-edgelist=${data_dir}/edgelist.tsv
+edgelist=${data_dir}/edgelist.tsv.gz
 output=edgelists/${dataset}
 
 test_results=$(printf \
