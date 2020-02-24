@@ -20,8 +20,8 @@ def parse_args():
 		help="features to load.")
 	parser.add_argument("--labels", dest="labels", type=str, 
 		help="path to labels")
-	parser.add_argument("--output", dest="output", type=str, 
-		help="path to load training and removed edges")
+	parser.add_argument("--removed_edges_dir", dest="removed_edges_dir", type=str, 
+		help="path to load removed edges")
 	
 	parser.add_argument("--embedding", dest="embedding_directory",  
 		help="directory of embedding to load.")
@@ -44,8 +44,6 @@ def main():
 
 	args = parse_args()
 
-
-
 	test_results_dir = args.test_results_dir
 	if not os.path.exists(test_results_dir):
 		os.makedirs(test_results_dir, exist_ok=True)
@@ -66,11 +64,12 @@ def main():
 	print ("Loaded dataset")
 	print ()
 
-	random.seed(args.seed)
-
 	seed = args.seed
-	removed_edges_dir = os.path.join(args.output, 
-		"seed={:03d}".format(seed), "removed_edges")
+	random.seed(seed)
+
+	# removed_edges_dir = os.path.join(args.output, 
+	# 	"seed={:03d}".format(seed), "removed_edges")
+	removed_edges_dir = args.removed_edges_dir
 
 	test_edgelist_fn = os.path.join(removed_edges_dir, 
 		"test_edges.tsv")

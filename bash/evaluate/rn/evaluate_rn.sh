@@ -28,7 +28,7 @@ seed=${seeds[$seed_id]}
 data_dir=datasets/${dataset}
 edgelist=${data_dir}/edgelist.tsv.gz
 embedding_dir=embeddings/${dataset}/${exp}
-output=nodes/${dataset}
+removed_edges_dir=$(printf nodes/${dataset}/seed=03d/removed_nodes ${seed})
 
 test_results=$(printf \
     "test_results/${dataset}/${exp}/dim=%03d/HEADNet/" ${dim})
@@ -37,7 +37,7 @@ embedding_dir=$(printf \
 echo ${embedding_dir}
 echo ${test_results}
 
-args=$(echo --edgelist ${edgelist} --output ${output} \
+args=$(echo --edgelist ${edgelist} --removed_edges_dir ${removed_edges_dir} \
     --dist_fn klh \
     --embedding ${embedding_dir} --seed ${seed} \
     --test-results-dir ${test_results})
