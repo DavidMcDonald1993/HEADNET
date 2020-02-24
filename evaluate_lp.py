@@ -1,5 +1,4 @@
 import os
-os.environ["PYTHON_EGG_CACHE"] = "/rds/projects/2018/hesz01/poincare-embeddings/python-eggs"
 
 import numpy as np
 import networkx as nx
@@ -7,11 +6,13 @@ import networkx as nx
 import argparse
 
 from headnet.utils import load_data
-from evaluation_utils import check_complete, load_embedding, compute_scores, evaluate_rank_AUROC_AP, evaluate_mean_average_precision, evaluate_precision_at_k, touch, threadsafe_save_test_results, read_edgelist
+from evaluation_utils import check_complete, load_embedding, compute_scores, evaluate_rank_AUROC_AP, evaluate_mean_average_precision, touch, threadsafe_save_test_results, read_edgelist
+
+import random
 
 def parse_args():
 
-	parser = argparse.ArgumentParser(description='Load Hyperboloid Embeddings and evaluate link prediction')
+	parser = argparse.ArgumentParser(description='Load Embeddings and evaluate link prediction')
 	
 	parser.add_argument("--edgelist", dest="edgelist", type=str, 
 		help="edgelist to load.")
@@ -33,13 +34,16 @@ def parse_args():
 	parser.add_argument("--seed", type=int, default=0)
 
 	parser.add_argument("--dist_fn", dest="dist_fn", type=str,
-		choices=["poincare", "hyperboloid", "euclidean", "kle", "klh"])
+		choices=["poincare", "hyperboloid", "euclidean", 
+		"kle", "klh", "st"])
 
 	return parser.parse_args()
+
 
 def main():
 
 	args = parse_args()
+
 
 
 	test_results_dir = args.test_results_dir
@@ -55,15 +59,16 @@ def main():
 		"test_results.lock")
 	touch(test_results_lock_filename)
 
-
 	args.directed = True
 
-	graph, _, _ = load_data(args)
+	graph, _ = load_data(args)
 	assert nx.is_directed(graph)
 	print ("Loaded dataset")
 	print ()
 
-	seed= args.seed
+	random.seed(args.seed)
+
+	seed = args.seed
 	removed_edges_dir = os.path.join(args.output, 
 		"seed={:03d}".format(seed), "removed_edges")
 
@@ -78,41 +83,41 @@ def main():
 	test_edges = read_edgelist(test_edgelist_fn)
 	test_non_edges = read_edgelist(test_non_edgelist_fn)
 
+	test_edges = np.array(test_edges)
+	test_non_edges = np.array(test_non_edges)
+
 	print ("number of test edges:", len(test_edges))
 	print ("number of test non edges:", len(test_non_edges))
 
-	embedding = load_embedding(args.dist_fn, args.embedding_directory)
-
-	scores = compute_scores(embedding, args.dist_fn)
+	embedding = load_embedding(args.dist_fn, 
+	args.embedding_directory)
 
 	test_results = dict()
 
 	(mean_rank_lp, ap_lp, 
-		roc_lp) = evaluate_rank_AUROC_AP(scores, 
-		test_edges, 
-		test_non_edges)
+		roc_lp) = evaluate_rank_AUROC_AP(
+			embedding,
+			test_edges, 
+			test_non_edges,
+			args.dist_fn)
 
 	test_results.update({"mean_rank_lp": mean_rank_lp, 
 		"ap_lp": ap_lp,
 		"roc_lp": roc_lp})
 
-	map_lp = evaluate_mean_average_precision(scores, 
-		test_edges, 
+	map_lp, precisions_at_k = evaluate_mean_average_precision(
+		embedding, 
+		test_edges,
+		args.dist_fn, 
 		graph_edges=graph.edges()
 		)
 
-	print ("MAP lp", map_lp)
-
 	test_results.update({"map_lp": map_lp})
 
-	# test_results_dir = args.test_results_dir
-	# if not os.path.exists(test_results_dir):
-	# 	os.makedirs(test_results_dir, exist_ok=True)
-	# test_results_filename = os.path.join(test_results_dir, 
-	# 	"test_results.csv")
-	# test_results_lock_filename = os.path.join(test_results_dir, 
-	# 	"test_results.lock")
-	# touch(test_results_lock_filename)
+	for k, pk in precisions_at_k.items():
+		print ("precision at", k, pk)
+	test_results.update({"p@{}".format(k): pk
+		for k, pk in precisions_at_k.items()})
 
 	print ("saving test results to {}".format(test_results_filename))
 

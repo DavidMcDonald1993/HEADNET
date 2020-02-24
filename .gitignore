@@ -19,3 +19,4 @@ __pycache__
 headnet/__pycache__
 headnet/*.pyc
 datasets/twitter/feats.csv.gz
+evaluate_nc.py

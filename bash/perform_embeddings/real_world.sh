@@ -6,7 +6,7 @@
 #SBATCH --array=0-1349
 #SBATCH --time=10-00:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=25G
+#SBATCH --mem=10G
 
 e=25
 

@@ -57,8 +57,10 @@ class TrainingDataGenerator(Sequence):
 		# batch_positive_samples = positive_samples[
 		# 	idx]
 		
-		idx = random.choices(range(len(positive_samples)), 
-			k=batch_size)
+		# idx = random.choices(range(len(positive_samples)), 
+		# 	k=batch_size)
+		idx = np.random.choice(num_positive_samples, 
+			size=batch_size)
 		batch_positive_samples = positive_samples[idx]
 
 
@@ -128,10 +130,13 @@ class TrainingDataGenerator(Sequence):
 		# 		batch_negative_samples[i::num_negative_samples]
 
 
-		batch_negative_samples = np.column_stack(
-			np.unravel_index(np.searchsorted(negative_samples[1], 
-				np.random.rand(batch_size * num_negative_samples)),
-				shape=(N, N)), )
+		# batch_negative_samples = np.column_stack(
+		# 	np.unravel_index(np.searchsorted(negative_samples[1], 
+		# 		np.random.rand(batch_size * num_negative_samples)),
+		# 		shape=(N, N)), )
+
+		batch_negative_samples = np.searchsorted(negative_samples[1],
+			np.random.rand(batch_size * num_negative_samples, 2))
 
 		batch_positive_samples = np.expand_dims(
 			batch_positive_samples[:,:-1], axis=1)
@@ -140,7 +145,7 @@ class TrainingDataGenerator(Sequence):
 
 		training_sample = np.concatenate(
 			(batch_positive_samples, batch_negative_samples), 
-			axis=1).reshape(batch_size*(num_negative_samples+1), 2)
+			axis=1).reshape(batch_size*(num_negative_samples + 1), 2)
 
 
 		# assert np.all(training_sample >= 0)
