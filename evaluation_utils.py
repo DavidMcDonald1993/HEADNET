@@ -25,13 +25,15 @@ def hyperbolic_distance_hyperboloid(u, v):
 	return np.squeeze(np.arccosh(1 + mink_dp), axis=-1)
 
 def hyperbolic_distance_poincare(u, v):
-	norm_u = np.linalg.norm(u, keepdims=True, axis=-1)
+	assert len(u.shape) == len(v.shape)
+	norm_u = np.linalg.norm(u, keepdims=False, axis=-1)
 	norm_u = np.minimum(norm_u, np.nextafter(1,0, ))
-	norm_v = np.linalg.norm(v, keepdims=True, axis=-1)
+	norm_v = np.linalg.norm(v, keepdims=False, axis=-1)
 	norm_v = np.minimum(norm_v, np.nextafter(1,0, ))
-	uu = euclidean_distances(u - v) ** 2
+	uu = np.linalg.norm(u - v, keepdims=False, axis=-1, ) ** 2
 	dd = (1 - norm_u**2) * (1 - norm_v**2)
 	return np.arccosh(1 + 2 * uu / dd)
+
 
 def logarithmic_map(p, x):
 
