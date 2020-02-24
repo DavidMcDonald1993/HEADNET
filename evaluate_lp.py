@@ -59,7 +59,7 @@ def main():
 
 	args.directed = True
 
-	graph, _ = load_data(args)
+	graph, _, _ = load_data(args)
 	assert nx.is_directed(graph)
 	print ("Loaded dataset")
 	print ()
