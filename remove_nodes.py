@@ -1,5 +1,4 @@
 import os
-os.environ["PYTHON_EGG_CACHE"] = "/rds/projects/2018/hesz01/poincare-embeddings/python-eggs"
 
 import random
 import numpy as np

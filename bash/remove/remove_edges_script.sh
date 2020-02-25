@@ -6,9 +6,9 @@
 #SBATCH --array=0-89
 #SBATCH --time=05:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=20G
+#SBATCH --mem=2G
 
-datasets=({cora_ml,citeseer,pubmed})
+datasets=(cora_ml citeseer pubmed)
 seeds=({0..29})
 
 num_datasets=${#datasets[@]}
