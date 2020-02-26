@@ -12,25 +12,22 @@ do
 				embedding_dir=$(printf \
 				"embeddings/${dataset}/${exp}/seed=%03d/dim=%03d" ${seed} ${dim})
 
-				if [ -f ${embedding_dir}/final_embedding.csv ] 
-				then
-					if [ ! -f ${embedding_dir}/final_embedding.csv.gz ]
-					then 
-						gzip ${embedding_dir}/final_embedding.csv
-					fi
-				else
-					echo no embedding at ${embedding_dir}/final_embedding.csv
-				fi
+				for matrix in embedding variance
+				do
 
-				if [ -f ${embedding_dir}/final_variance.csv ]
-				then 
-					if [ ! -f ${embedding_dir}/final_variance.csv.gz ]
-					then 
-						gzip ${embedding_dir}/final_variance.csv
+					if [ -f ${embedding_dir}/final_${matrix}.csv.gz ] 
+					then
+						continue
 					fi
-				else
-					echo no variance at ${embedding_dir}/final_variance.csv
-				fi
+
+					if [ -f ${embedding_dir}/final_${matrix}.csv ] 
+					then
+						gzip ${embedding_dir}/final_${matrix}.csv
+					else
+						echo no embedding at ${embedding_dir}/final_${matrix}.csv
+					fi
+
+				done
 			done
 		done
 	done
