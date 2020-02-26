@@ -3,13 +3,14 @@
 #SBATCH --job-name=removeEdges
 #SBATCH --output=removeEdges_%A_%a.out
 #SBATCH --error=removeEdges_%A_%a.err
-#SBATCH --array=0-89
+#SBATCH --array=0-149
 #SBATCH --time=05:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=2G
+#SBATCH --mem=15G
 
-datasets=(cora_ml citeseer pubmed)
+datasets=(cora_ml citeseer pubmed twitter gplus)
 seeds=({0..29})
+
 
 num_datasets=${#datasets[@]}
 num_seeds=${#seeds[@]}
@@ -19,6 +20,8 @@ seed_id=$((SLURM_ARRAY_TASK_ID % (num_seeds) ))
 
 dataset=${datasets[$dataset_id]}
 seed=${seeds[$seed_id]}
+
+echo $dataset $seed
 
 edgelist=datasets/${dataset}/edgelist.tsv.gz
 output=edgelists/${dataset}
@@ -31,5 +34,14 @@ then
 	module load bluebear
 	module load apps/python3/3.5.2
 
-	python remove_edges.py --edgelist=$edgelist --output=$output --seed $seed
+	args=$(echo "--edgelist=$edgelist \
+		--output=$output --seed $seed")
+
+	echo $args
+
+	python remove_edges.py ${args}
+else 
+
+	echo $edgelist_f already exists
+
 fi
