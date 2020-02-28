@@ -3,12 +3,12 @@
 #SBATCH --job-name=removeNodes
 #SBATCH --output=removeNodes_%A_%a.out
 #SBATCH --error=removeNodes_%A_%a.err
-#SBATCH --array=0-149
+#SBATCH --array=0-179
 #SBATCH --time=05:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=15G
 
-datasets=(cora_ml citeseer pubmed twitter gplus)
+datasets=(cora_ml citeseer pubmed twitter gplus cora)
 seeds=({0..29})
 
 num_datasets=${#datasets[@]}
