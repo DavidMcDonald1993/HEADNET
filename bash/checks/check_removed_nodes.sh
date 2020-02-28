@@ -1,7 +1,6 @@
 #!/bin/bash
 
-# datasets=({00..29})
-datasets=({cora_ml,citeseer,pubmed})
+datasets=(cora_ml citeseer pubmed twitter gplus cora)
 seeds=({0..29})
 
 for dataset in ${datasets[@]};
