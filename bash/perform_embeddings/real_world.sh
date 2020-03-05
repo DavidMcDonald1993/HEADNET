@@ -3,14 +3,14 @@
 #SBATCH --job-name=HEADNET
 #SBATCH --output=HEADNET_%A_%a.out
 #SBATCH --error=HEADNET_%A_%a.err
-#SBATCH --array=0-1349
+#SBATCH --array=0-1799
 #SBATCH --time=10-00:00:00
 #SBATCH --ntasks=10
 #SBATCH --mem=5G
 
 e=25
 
-datasets=(cora_ml citeseer pubmed)
+datasets=(cora_ml citeseer pubmed cora)
 dims=(2 5 10 25 50)
 seeds=({0..29})
 exps=(lp_experiment recon_experiment rn_experiment)
