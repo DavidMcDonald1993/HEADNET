@@ -29,6 +29,7 @@ class TrainingDataGenerator(Sequence):
 		idx = np.random.permutation(len(positive_samples))
 		self.positive_samples = positive_samples[idx]
 		self.negative_samples = negative_samples
+		self.num_positive_samples = len(positive_samples)
 		self.batch_size = args.batch_size
 		self.num_negative_samples = args.num_negative_samples
 		self.model = model
@@ -50,6 +51,7 @@ class TrainingDataGenerator(Sequence):
 		num_negative_samples = self.num_negative_samples
 		negative_samples = self.negative_samples
 		N = self.N
+		num_positive_samples = self.num_positive_samples
 
 		# idx = np.arange(batch_idx * batch_size, 
 		# 	min(len(positive_samples), 

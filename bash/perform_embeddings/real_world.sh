@@ -5,8 +5,8 @@
 #SBATCH --error=HEADNET_%A_%a.err
 #SBATCH --array=0-1349
 #SBATCH --time=10-00:00:00
-#SBATCH --ntasks=1
-#SBATCH --mem=10G
+#SBATCH --ntasks=10
+#SBATCH --mem=5G
 
 e=25
 
@@ -54,12 +54,28 @@ if [ ! -f ${embedding_dir}/final_embedding.csv.gz ]
 then 
     module purge
     module load bluebear
-    module load TensorFlow/1.10.1-foss-2018b-Python-3.6.6
-    pip install --user keras==2.2.4
 
-    args=$(echo --edgelist ${edgelist} --features ${features} \
-    --embedding ${embedding_dir} --seed ${seed} \
-    --dim ${dim} --context-size 1 -e ${e})
+    if [ ! -f ${embedding_dir}/final_embedding.csv ]
+    then 
+        echo ${embedding_dir}/final_embedding.csv is missing -- performing embedding 
 
-    python main.py ${args}
+        module load TensorFlow/1.10.1-foss-2018b-Python-3.6.6
+        pip install --user keras==2.2.4
+
+        args=$(echo --edgelist ${edgelist} --features ${features} \
+        --embedding ${embedding_dir} --seed ${seed} \
+        --dim ${dim} --context-size 1 -e ${e})
+
+        python main.py ${args}
+
+        fi
+
+    echo compressing ${embedding_dir}/final_embedding.csv
+    gzip ${embedding_dir}/final_embedding.csv
+    echo compressing ${embedding_dir}/final_variance.csv
+    gzip ${embedding_dir}/final_variance.csv
+else
+
+    echo ${embedding_dir}/final_embedding.csv.gz already exists
+    echo ${embedding_dir}/final_variance.csv.gz already exists
 fi
