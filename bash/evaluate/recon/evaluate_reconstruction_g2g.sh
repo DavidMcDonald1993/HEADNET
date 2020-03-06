@@ -3,13 +3,13 @@
 #SBATCH --job-name=G2GFEATRECON
 #SBATCH --output=G2GFEATRECON_%A_%a.out
 #SBATCH --error=G2GFEATRECON_%A_%a.err
-#SBATCH --array=0-449
+#SBATCH --array=0-599
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=20G
+#SBATCH --mem=5G
 
 scales=(False)
-datasets=(cora_ml citeseer pubmed)
+datasets=(cora_ml citeseer pubmed cora)
 dims=(2 5 10 25 50)
 seeds=({0..29})
 ks=(03)
@@ -32,6 +32,9 @@ dataset=${datasets[$dataset_id]}
 dim=${dims[$dim_id]}
 seed=${seeds[$seed_id]}
 k=${ks[$k_id]}
+
+echo $scale $dataset $dim $seed $k
+
 
 data_dir=datasets/${dataset}
 edgelist=${data_dir}/edgelist.tsv.gz

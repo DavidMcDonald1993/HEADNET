@@ -3,13 +3,13 @@
 #SBATCH --job-name=G2GFEATRN
 #SBATCH --output=G2GFEATRN_%A_%a.out
 #SBATCH --error=G2GFEATRN_%A_%a.err
-#SBATCH --array=0-449
+#SBATCH --array=0-599
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=20G
+#SBATCH --mem=5G
 
 scales=(False)
-datasets=(cora_ml citeseer pubmed)
+datasets=(cora_ml citeseer pubmed cora)
 dims=(2 5 10 25 50)
 seeds=({0..29})
 ks=(03)
@@ -33,9 +33,11 @@ dim=${dims[$dim_id]}
 seed=${seeds[$seed_id]}
 k=${ks[$k_id]}
 
+echo $scale $dataset $dim $seed $k
+
 data_dir=datasets/${dataset}
 edgelist=${data_dir}/edgelist.tsv.gz
-removed_edges_dir=$(printf nodes/${dataset}/seed=03d%/removed_edges ${seed})
+removed_edges_dir=$(printf nodes/${dataset}/seed=%03d/removed_edges ${seed})
 
 test_results=$(printf \
     "test_results/${dataset}/${exp}/dim=%03d/g2g_k=${k}/" ${dim})
@@ -44,7 +46,8 @@ embedding_dir=$(printf "${embedding_dir}/scale=${scale}/k=${k}/seed=%03d/dim=%03
 echo ${embedding_dir}
 echo ${test_results}
 
-args=$(echo --edgelist ${edgelist} --removed_edges_dir ${removed_edges_dir} \
+args=$(echo --edgelist ${edgelist} \
+    --removed_edges_dir ${removed_edges_dir} \
     --dist_fn kle \
     --embedding ${embedding_dir} --seed ${seed} \
     --test-results-dir ${test_results})

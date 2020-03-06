@@ -3,12 +3,12 @@
 #SBATCH --job-name=HEADNETRECON
 #SBATCH --output=HEADNETRECON_%A_%a.out
 #SBATCH --error=HEADNETRECON_%A_%a.err
-#SBATCH --array=0-449
+#SBATCH --array=0-599
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=30G
+#SBATCH --mem=5G
 
-datasets=(cora_ml citeseer pubmed)
+datasets=(cora_ml citeseer pubmed cora)
 dims=(2 5 10 25 50)
 seeds=({0..29})
 exp=recon_experiment
@@ -24,6 +24,9 @@ seed_id=$((SLURM_ARRAY_TASK_ID % num_seeds ))
 dataset=${datasets[$dataset_id]}
 dim=${dims[$dim_id]}
 seed=${seeds[$seed_id]}
+
+echo $dataset $dim $seed
+
 
 data_dir=datasets/${dataset}
 edgelist=${data_dir}/edgelist.tsv.gz

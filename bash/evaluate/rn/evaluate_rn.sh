@@ -3,12 +3,12 @@
 #SBATCH --job-name=HEADNETRN
 #SBATCH --output=HEADNETRN_%A_%a.out
 #SBATCH --error=HEADNETRN_%A_%a.err
-#SBATCH --array=0-449
+#SBATCH --array=0-599
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
-#SBATCH --mem=30G
+#SBATCH --mem=5G
 
-datasets=(cora_ml citeseer pubmed)
+datasets=(cora_ml citeseer pubmed cora)
 dims=(2 5 10 25 50)
 seeds=({0..29})
 exp=rn_experiment
@@ -25,10 +25,13 @@ dataset=${datasets[$dataset_id]}
 dim=${dims[$dim_id]}
 seed=${seeds[$seed_id]}
 
+echo $dataset $dim $seed
+
+
 data_dir=datasets/${dataset}
 edgelist=${data_dir}/edgelist.tsv.gz
 embedding_dir=embeddings/${dataset}/${exp}
-removed_edges_dir=$(printf nodes/${dataset}/seed=03d/removed_nodes ${seed})
+removed_edges_dir=$(printf nodes/${dataset}/seed=%03d/removed_nodes ${seed})
 
 test_results=$(printf \
     "test_results/${dataset}/${exp}/dim=%03d/HEADNet/" ${dim})
@@ -37,7 +40,8 @@ embedding_dir=$(printf \
 echo ${embedding_dir}
 echo ${test_results}
 
-args=$(echo --edgelist ${edgelist} --removed_edges_dir ${removed_edges_dir} \
+args=$(echo --edgelist ${edgelist} \
+    --removed_edges_dir ${removed_edges_dir} \
     --dist_fn klh \
     --embedding ${embedding_dir} --seed ${seed} \
     --test-results-dir ${test_results})
