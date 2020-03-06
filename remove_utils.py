@@ -20,4 +20,4 @@ def sample_non_edges(nodes, edges, sample_size):
 		non_edges = non_edges.union(non_edges_)
 		# if edge not in edges + non_edges:
 		# 	non_edges.append(edge)
-	return non_edges
+	return list(non_edges)

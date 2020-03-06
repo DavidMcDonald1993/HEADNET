@@ -100,12 +100,6 @@ def main():
 		args.dist_fn)
 	test_results.update({"map_recon": map_recon})
 
-	# precisions_at_k = [(k, 
-	# 	evaluate_precision_at_k(embedding,  
-	# 		test_edges, 
-	# 		args.dist_fn,
-	# 		k=k))
-	# 		for k in (1, 3, 5, 10)]
 	for k, pk in precisions_at_k.items():
 		print ("precision at", k, pk)
 	test_results.update({"p@{}".format(k): pk
