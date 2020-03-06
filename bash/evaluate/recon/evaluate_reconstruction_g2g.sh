@@ -49,7 +49,7 @@ echo ${embedding_dir}
 echo ${test_results}
 
 args=$(echo --edgelist ${edgelist} --dist_fn kle \
-    --embedding ${embedding_dir} --seed ${dataset} \
+    --embedding ${embedding_dir} --seed ${seed} \
     --test-results-dir ${test_results})
 echo ${args}
 
