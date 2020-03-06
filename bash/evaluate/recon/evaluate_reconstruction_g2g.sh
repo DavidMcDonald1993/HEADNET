@@ -43,8 +43,7 @@ embedding_dir=$(printf "${embedding_dir}/scale=${scale}/k=${k}/seed=%03d/dim=%03
 
 test_results=$(printf \
     "test_results/${dataset}/${exp}/dim=%03d/g2g_k=${k}/" ${dim})
-embedding_dir=$(printf \
-    "${embedding_dir}/seed=%03d/dim=%03d/" ${seed} ${dim})
+
 echo ${embedding_dir}
 echo ${test_results}
 
