@@ -31,7 +31,7 @@ echo $dataset $dim $seed
 data_dir=datasets/${dataset}
 edgelist=${data_dir}/edgelist.tsv.gz
 embedding_dir=embeddings/${dataset}/${exp}
-removed_edges_dir=$(printf nodes/${dataset}/seed=%03d/removed_nodes ${seed})
+removed_edges_dir=$(printf nodes/${dataset}/seed=%03d/removed_edges ${seed})
 
 test_results=$(printf \
     "test_results/${dataset}/${exp}/dim=%03d/HEADNet/" ${dim})

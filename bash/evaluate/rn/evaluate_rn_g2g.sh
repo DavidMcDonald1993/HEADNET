@@ -3,7 +3,7 @@
 #SBATCH --job-name=G2GFEATRN
 #SBATCH --output=G2GFEATRN_%A_%a.out
 #SBATCH --error=G2GFEATRN_%A_%a.err
-#SBATCH --array=0-599
+#SBATCH --array=0-1199
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=5G
@@ -12,7 +12,7 @@ scales=(False)
 datasets=(cora_ml citeseer pubmed cora)
 dims=(2 5 10 25 50)
 seeds=({0..29})
-ks=(03)
+ks=(01 03)
 exp=rn_experiment
 
 num_scales=${#scales[@]}
