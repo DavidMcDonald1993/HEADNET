@@ -121,9 +121,6 @@ def main():
 	assert features_train is not None
 	print ("Loaded dataset")
 
-	if False:
-		plot_degree_dist(graph, "degree distribution")
-
 	configure_paths(args)
 
 	print ("Configured paths")
@@ -197,6 +194,8 @@ def main():
 	print ("saving final embedding")
 
 	embedding, sigmas = embedder.predict(features_all)
+	assert np.isfinite(embedding).all()
+	assert np.isfinite(sigmas).all()
 	poincare_embedding = hyperboloid_to_poincare_ball(embedding)
 	print ("embedding", np.linalg.norm(poincare_embedding.mean(0)))
 

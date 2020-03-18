@@ -38,6 +38,8 @@ class TrainingDataGenerator(Sequence):
 		self.context_size = args.context_size
 		
 
+		self.scaler = StandardScaler()
+
 		print ("Built generator")
 
 	def __len__(self):
@@ -64,7 +66,6 @@ class TrainingDataGenerator(Sequence):
 		idx = np.random.choice(num_positive_samples, 
 			size=batch_size)
 		batch_positive_samples = positive_samples[idx]
-
 
 		###############################################
 
@@ -140,15 +141,23 @@ class TrainingDataGenerator(Sequence):
 		batch_negative_samples = np.searchsorted(negative_samples[1],
 			np.random.rand(batch_size * num_negative_samples, 2))
 
+		# mask = np.array([u==v for u, v in batch_negative_samples])
+
+		# batch_negative_samples[mask] += np.array([[0, 1]])
+
+		# for u, v in batch_negative_samples:
+		# 	assert u!=v
+
 		batch_positive_samples = np.expand_dims(
 			batch_positive_samples[:,:-1], axis=1)
 		batch_negative_samples = batch_negative_samples.reshape(
 			batch_size, num_negative_samples, 2)
 
+
 		training_sample = np.concatenate(
 			(batch_positive_samples, batch_negative_samples), 
 			axis=1).reshape(batch_size*(num_negative_samples + 1), 2)
-
+		
 
 		# assert np.all(training_sample >= 0)
 

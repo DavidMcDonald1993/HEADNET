@@ -1,21 +1,28 @@
 import keras.backend as K
 import tensorflow as tf 
-from keras.layers import Input, Dense, Activation, Lambda, Reshape, BatchNormalization
+from keras.layers import Input, Dense, Lambda, Reshape
 from keras.models import Model
 from keras.initializers  import RandomUniform
 from keras import regularizers
-from tensorflow.train import AdamOptimizer, GradientDescentOptimizer
+from tensorflow.train import AdamOptimizer#, GradientDescentOptimizer
 
 
 from headnet.losses import asym_hyperbolic_loss
-from headnet.optimizers import ExponentialMappingOptimizer
+# from headnet.optimizers import ExponentialMappingOptimizer
 from headnet.hyperboloid_layers import logarithmic_map, parallel_transport, exp_map_0
-from headnet.hyperboloid_layers import HyperboloidFeedForwardLayer
+# from headnet.hyperboloid_layers import HyperboloidFeedForwardLayer
 
 reg = 1e-3
 # initializer=RandomUniform(-1e-3, 1e-3)
 
+def normalise_to_hyperboloid(x):
+	t = K.sqrt(K.sum(K.square(x), axis=-1, keepdims=True) + 1)
+	return K.concatenate([x, t], axis=-1)
+
 def map_to_tangent_space_mu_zero(mus):
+
+
+	mus = tf.verify_tensor_all_finite(mus, "fail at beginning of to_tangent_space_mu_0")
 
 
 	source_embedding = mus[:,:1]
@@ -24,12 +31,16 @@ def map_to_tangent_space_mu_zero(mus):
 	to_tangent_space = logarithmic_map(source_embedding,
 		target_embedding)
 
+	to_tangent_space = tf.verify_tensor_all_finite(to_tangent_space, "fail after to tangent space")
+
 	mu_zero = K.concatenate([
 		K.zeros_like(source_embedding[..., :-1]), 
 		K.ones_like(source_embedding[...,-1:])], axis=-1)
 	to_tangent_space_mu_zero = parallel_transport(source_embedding,
 		mu_zero,
 		to_tangent_space)
+	to_tangent_space_mu_zero = tf.verify_tensor_all_finite(to_tangent_space_mu_zero, 
+		"fail after to mu 0")
 	# # ignore 0 t coordinate
 	to_tangent_space_mu_zero = to_tangent_space_mu_zero[..., :-1]
 
@@ -39,6 +50,9 @@ def kullback_leibler_divergence(args):
 
 	mus, sigmas = args
 
+	mus = tf.verify_tensor_all_finite(mus, "fail mus kld")
+	sigmass = tf.verify_tensor_all_finite(sigmas, "fail sigmas kld")
+
 	k = K.int_shape(mus)[-1]
 
 	sigmas = K.maximum(sigmas, K.epsilon())
@@ -47,6 +61,7 @@ def kullback_leibler_divergence(args):
 	target_sigma = sigmas[:,1:]
 
 	sigma_ratio = target_sigma / source_sigma
+	sigma_ratio = K.maximum(sigma_ratio, K.epsilon())
 
 	trace_fac = K.sum(sigma_ratio,
 		axis=-1, 
@@ -75,7 +90,7 @@ def build_hyperboloid_asym_model(num_attributes,
 
 	input_transform = Dense(
 		num_hidden,
-		activation="tanh",
+		activation="elu",
 		# kernel_initializer=initializer,
 		kernel_regularizer=regularizers.l2(reg),
 		bias_regularizer=regularizers.l2(reg),
@@ -97,6 +112,8 @@ def build_hyperboloid_asym_model(num_attributes,
 			[[0, 0]]*(len(x.shape)-1) + [[0, 1]]))),
 		name="to_hyperboloid"
 	)(hyperboloid_embedding_layer)
+
+	# to_hyperboloid = Lambda(normalise_to_hyperboloid, )(hyperboloid_embedding_layer)
 
 	sigma_layer = Dense(
 		embedding_dim, 

@@ -163,7 +163,10 @@ def determine_positive_and_negative_samples(graph, args):
 		N = len(graph)
 		A0 = identity(N, dtype=int)
 		print ("determined 0 hop neighbours")
-		A1 = step(nx.adjacency_matrix(graph, nodelist=sorted(graph)) - A0)
+		# A1 = step(nx.adjacency_matrix(graph, nodelist=sorted(graph)) - A0)
+		A1 = nx.adjacency_matrix(graph, nodelist=sorted(graph)).tolil()
+		A1.setdiag(0)
+		A1 = A1.tocsr()
 		print ("determined 1 hop neighbours")
 		positive_samples = [A0, A1]
 		for i in range(2, k+1):
