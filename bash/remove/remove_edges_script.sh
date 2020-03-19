@@ -32,7 +32,8 @@ if [ ! -f $edgelist_f  ]
 then
 	module purge
 	module load bluebear
-	module load apps/python3/3.5.2
+	module load future/0.16.0-foss-2018b-Python-3.6.6
+
 
 	args=$(echo "--edgelist=$edgelist \
 		--output=$output --seed $seed")
