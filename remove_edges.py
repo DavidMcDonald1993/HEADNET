@@ -17,7 +17,7 @@ def split_edges(graph,
 	val_split=0.05, 
 	test_split=0.10, 
 	neg_mul=1,
-	cover=False):
+	cover=True):
 	
 	assert isinstance(graph, nx.DiGraph)
 	assert isinstance(edges, list)

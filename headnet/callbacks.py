@@ -67,23 +67,5 @@ class Checkpointer(Callback):
 		ranks = np.linalg.norm(embedding, axis=-1)
 		print ("ranks", ranks.min(), ranks.mean(),
 			ranks.max() )
-		# assert not np.any(np.isnan(embedding))
-		# assert not np.any(np.isinf(embedding))
-		# assert (embedding[:,-1] > 0).all(), embedding[:,-1]
-		# assert np.allclose(minkowski_dot(embedding, embedding), -1)
-
-		# print ("saving current embedding to {}".\
-		# 	format(embedding_filename))
-		# embedding_df = pd.DataFrame(embedding, index=self.nodes)
-		# embedding_df.to_csv(embedding_filename, compression="gzip")
-
-		# variance_filename = os.path.join(self.embedding_directory, 
-		# 	"{:05d}_variance.csv.gz".format(self.epoch))
 		print ("variance", variance.min(),
 			variance.mean(), variance.max())
-
-		# print ("saving current variance to {}".\
-		# 	format(variance_filename))
-		# variance_df = pd.DataFrame(variance, index=self.nodes)
-		# variance_df.to_csv(variance_filename, compression="gzip")
-		# print()

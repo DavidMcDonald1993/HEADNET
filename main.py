@@ -196,6 +196,11 @@ def main():
 	embedding, sigmas = embedder.predict(features_all)
 	assert np.isfinite(embedding).all()
 	assert np.isfinite(sigmas).all()
+
+	print (embedding.shape, sigmas.shape)
+	
+
+
 	poincare_embedding = hyperboloid_to_poincare_ball(embedding)
 	print ("embedding", np.linalg.norm(poincare_embedding.mean(0)))
 

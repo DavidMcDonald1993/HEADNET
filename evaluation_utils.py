@@ -227,42 +227,6 @@ def compute_scores(u, v, dist_fn):
 
 	return scores
 
-# def evaluate_precision_at_k(embedding, 
-# 	edgelist,  
-# 	dist_fn,
-# 	k=10):
-
-# 	edgelist_dict = {}
-# 	for u, v in edgelist:
-# 		if u not in edgelist_dict:
-# 			edgelist_dict.update({u: set()})
-# 		edgelist_dict[u].add(v)
-
-# 	precisions = []
-# 	for u in edgelist_dict:
-
-# 		true_neighbours = edgelist_dict[u]
-# 		if len(true_neighbours) < k:
-# 			continue
-
-# 		if isinstance(embedding, tuple):
-# 			scores = compute_scores(
-# 				(embedding[0][u:u+1], embedding[1][u:u+1]), 
-# 				embedding,
-# 				dist_fn)
-# 		else:
-# 			scores = compute_scores(
-# 				embedding[u:u+1], 
-# 				embedding,
-# 				dist_fn)
-# 		assert len(scores.shape) == 1
-# 		nodes_sorted = scores.argsort()
-# 		nodes_sorted = nodes_sorted[nodes_sorted != u][-k:]
-# 		s = np.mean([u in true_neighbours for u in nodes_sorted])
-# 		precisions.append(s)
-
-# 	return np.mean(precisions)
-
 def evaluate_mean_average_precision(
 	embedding, 
 	edgelist, 
@@ -326,18 +290,6 @@ def evaluate_mean_average_precision(
 
 		labels = np.append(np.ones_like(true_neighbours),
 			np.zeros_like(non_neighbours))
-
-		# true_neighbours = edgelist_dict[u]
-		# labels = np.array([n in true_neighbours 
-		# 	for n in range(N)])
-		# mask = np.array([n!=u or n in true_neighbours
-		# 	for n in range(N)]) # ignore self loops
-		# if graph_edges and u in graph_edgelist_dict:
-		# 	mask *= np.array([n not in graph_edgelist_dict[u]
-		# 		for n in range(N)]) # ignore training edges
-		# 	assert mask.sum() > 0
-		# 	assert labels[mask].sum() > 0
-		# s = average_precision_score(labels[mask], scores[mask])
 		
 		s = average_precision_score(labels, scores)
 		precisions.append(s)
@@ -354,7 +306,6 @@ def evaluate_mean_average_precision(
 
 		if i % 1000 == 0:
 			print ("completed", i, "/", len(edgelist_dict))
-
 
 	mAP = np.mean(precisions)
 	print ("MAP", mAP)
@@ -403,7 +354,9 @@ def evaluate_rank_AUROC_AP(
 def get_scores(embedding, edges, dist_fn):
 	if isinstance(embedding, tuple):
 		embedding, embedding_ = embedding
+		print ("embedding is tuple")
 		print ("embedding shape is", embedding.shape)
+		print ("embedding_ shape is", embedding_.shape)
 
 		embedding_u = (embedding[edges[:,0]], 
 			embedding_[edges[:,0]])

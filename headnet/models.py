@@ -113,8 +113,6 @@ def build_hyperboloid_asym_model(num_attributes,
 		name="to_hyperboloid"
 	)(hyperboloid_embedding_layer)
 
-	# to_hyperboloid = Lambda(normalise_to_hyperboloid, )(hyperboloid_embedding_layer)
-
 	sigma_layer = Dense(
 		embedding_dim, 
 		activation=lambda x: K.elu(x) + 1.,
