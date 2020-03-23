@@ -54,7 +54,7 @@ def parallel_transport(p, q, x):
 
 @function.Defun(tf.float64, tf.float64)
 def norm_grad(x, dy):
-    return dy*(x/(tf.norm(x)+1e-12))
+    return dy*(x/(tf.norm(x) + 1e-12))
 
 @function.Defun(tf.float64, grad_func=norm_grad, 
 	shape_func=lambda op: \
@@ -77,17 +77,29 @@ def normalise_to_hyperboloid(x):
 def exponential_mapping( p, x ):
 
 	# minkowski unit norm
-	# r = minkowski_norm(x)
-	r = norm(x[...,:-1]) # use euclidean norm since x has a 0 t co-ordinate
+	r = minkowski_norm(x)
+	# r = norm(x[...,:-1]) # use euclidean norm since x has a 0 t co-ordinate
 
-	r = tf.verify_tensor_all_finite(r, "fail after r")
+	# return K.concatenate([tf.sinh(r) * x[...,:-1], 
+	# 	tf.cosh(r)], axis=-1)
+	# x = tf.sinh(r) * x[..., :-1]
 
-	x = x / K.maximum(r, K.epsilon())
+	# t = K.sqrt(K.sum(K.square(x), axis=-1, keepdims=True) + 1)
+	# return K.concatenate([x, t], axis=-1)
+
+	# r = tf.verify_tensor_all_finite(r, "fail after r")
+
+	# x = x / K.maximum(r, K.epsilon())
+	# x = x / r
+
+	# exp_map = tf.cosh(r) * p + tf.sinh(r) * x
+
+	######################################
 
 	idx = tf.where(r > K.epsilon())[:,0]
 
 	cosh_r = tf.cosh(r)
-	cosh_r = tf.verify_tensor_all_finite(cosh_r, "fail after cosh")
+	# cosh_r = tf.verify_tensor_all_finite(cosh_r, "fail after cosh")
 	exp_map_p = cosh_r * p
 
 	non_zero_norm = tf.gather(r, idx)
@@ -95,25 +107,36 @@ def exponential_mapping( p, x ):
 	z = tf.gather(x, idx)
 
 	updates = tf.sinh(non_zero_norm) * z
-	updates = tf.verify_tensor_all_finite(updates, "fail after sinh")
+	# updates = tf.verify_tensor_all_finite(updates, "fail after sinh")
 	dense_shape = tf.shape(p, out_type=tf.int64)
 	exp_map_x = tf.scatter_nd(indices=idx[:,None],
 		updates=updates, 
 		shape=dense_shape)
 
 	exp_map = exp_map_p + exp_map_x
-	exp_map = tf.verify_tensor_all_finite(exp_map, "fail before normal")
+
+	###########################################
+
+
+	# exp_map = tf.verify_tensor_all_finite(exp_map, "fail before normal")
 	exp_map = normalise_to_hyperboloid(exp_map) # account for floating point imprecision
-	exp_map = tf.verify_tensor_all_finite(exp_map, "fail after normal")
+	# exp_map = tf.verify_tensor_all_finite(exp_map, "fail after normal")
 
 	return exp_map
 
 def exp_map_0(x):
-	x = tf.verify_tensor_all_finite(x, "fail exp 0")
+	# x = tf.verify_tensor_all_finite(x, "fail exp 0")
 	assert len(x.shape) > 1
-	mu_zero = K.concatenate([K.zeros_like(x[..., :-1]), 
-		K.ones_like(x[...,-1:])], axis=-1)
-	return exponential_mapping(mu_zero, x)
+
+	r = norm(x)
+	x = tf.sinh(r) * x
+	t = K.sqrt(K.sum(K.square(x), axis=-1, keepdims=True) + 1)
+	return K.concatenate([x, t], axis=-1)
+
+
+	# mu_zero = K.concatenate([K.zeros_like(x[..., :-1]), 
+	# 	K.ones_like(x[...,-1:])], axis=-1)
+	# return exponential_mapping(mu_zero, x)
 
 def logarithmic_map(p, x):
 	assert len(p.shape) == len(x.shape)
@@ -123,7 +146,8 @@ def logarithmic_map(p, x):
 	alpha = K.maximum(alpha, 1 + K.epsilon())
 
 	return tf.acosh(alpha) * (x - alpha * p) / \
-		K.maximum(K.sqrt(K.maximum(alpha ** 2 - 1., 0.)), K.epsilon())
+		K.maximum(K.sqrt(K.maximum(alpha ** 2 - 1., 0.)),
+			K.epsilon())
 
 def log_map_0(x):
 	# assert len(x.shape) == 2

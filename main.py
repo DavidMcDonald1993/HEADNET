@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import argparse
 import random
 import numpy as np
@@ -101,7 +101,6 @@ def configure_paths(args):
 
 def main():
 
-
 	args = parse_args()
 
 	args.directed = True
@@ -196,10 +195,6 @@ def main():
 	embedding, sigmas = embedder.predict(features_all)
 	assert np.isfinite(embedding).all()
 	assert np.isfinite(sigmas).all()
-
-	print (embedding.shape, sigmas.shape)
-	
-
 
 	poincare_embedding = hyperboloid_to_poincare_ball(embedding)
 	print ("embedding", np.linalg.norm(poincare_embedding.mean(0)))

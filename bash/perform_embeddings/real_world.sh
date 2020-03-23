@@ -68,12 +68,12 @@ then
 
         python main.py ${args}
 
-        fi
+    fi
 
     echo compressing ${embedding_dir}/final_embedding.csv
-    gzip ${embedding_dir}/final_embedding.csv
+    gzip -f ${embedding_dir}/final_embedding.csv
     echo compressing ${embedding_dir}/final_variance.csv
-    gzip ${embedding_dir}/final_variance.csv
+    gzip -f ${embedding_dir}/final_variance.csv
 else
 
     echo ${embedding_dir}/final_embedding.csv.gz already exists

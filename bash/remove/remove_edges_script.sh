@@ -11,7 +11,6 @@
 datasets=(cora_ml citeseer pubmed twitter gplus cora)
 seeds=({0..29})
 
-
 num_datasets=${#datasets[@]}
 num_seeds=${#seeds[@]}
 

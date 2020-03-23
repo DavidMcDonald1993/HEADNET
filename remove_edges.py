@@ -12,7 +12,6 @@ from remove_utils import sample_non_edges, write_edgelist_to_file
 
 def split_edges(graph, 
 	edges, 
-	# non_edges, 
 	seed,
 	val_split=0.05, 
 	test_split=0.10, 
@@ -29,11 +28,9 @@ def split_edges(graph,
 
 	random.seed(seed)
 	random.shuffle(edges)
-	# random.shuffle(non_edges)
 
 	# ensure every node appears in edgelist
 	nodes = set(graph)
-	# edges = set(edges)
 	cover = []
 	if cover:
 		for u, v in edges:
@@ -44,17 +41,9 @@ def split_edges(graph,
 				break
 		
 		print ("determined cover")
-
-		# edges = [edge for edge in edges
-		# 	if edge not in cover] + cover
 		edges = filter(lambda edge: edge not in cover, edges)
-		
 		print ("filtered cover out of edges")
-		# edges = list(edges - cover) + list(cover)
 
-	# val_edges = edges[:num_val_edges]
-	# test_edges = edges[num_val_edges:num_val_edges+num_test_edges]
-	# train_edges = edges[num_val_edges+num_test_edges:]
 	val_edges = []
 	test_edges = []
 	train_edges = []
@@ -69,9 +58,6 @@ def split_edges(graph,
 	train_edges += cover
 
 	print ("determined edge split")
-
-	# val_non_edges = non_edges[:num_val_edges*neg_mul]
-	# test_non_edges = non_edges[num_val_edges*neg_mul:num_val_edges*neg_mul+num_test_edges*neg_mul]
 
 	val_non_edges = sample_non_edges(graph, 
 		edge_set, 
@@ -158,14 +144,6 @@ def main():
 	write_edgelist_to_file(test_non_edges, test_non_edgelist_fn)
 
 	print ("done")
-
-
-	# h = nx.read_weighted_edgelist(training_edgelist_fn, 
-	# 	delimiter="\t",)
-	# print (len(h), len(h.edges))
-	# for edge in val_edges + test_edges:
-	# 	print (edge)
-	# 	assert edge not in h.edges
 
 if __name__ == "__main__":
 	main()

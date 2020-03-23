@@ -40,9 +40,6 @@ class Checkpointer(Callback):
 	def remove_old_models(self):
 		embedding_directory = self.embedding_directory
 		history = self.history
-		# for old_model_path in sorted(
-		# 	glob.iglob(os.path.join(self.embedding_directory, 
-		# 		"[0-9]+_model.h5"))):
 		old_model_paths = sorted(filter(
 				re.compile("[0-9]+\_model\.h5").match, 
 				os.listdir(embedding_directory)))
@@ -65,6 +62,7 @@ class Checkpointer(Callback):
 		embedding = hyperboloid_to_poincare_ball(embedding)
 		print ("embedding", np.linalg.norm(embedding.mean(0)))
 		ranks = np.linalg.norm(embedding, axis=-1)
+		assert (ranks < 1).all()
 		print ("ranks", ranks.min(), ranks.mean(),
 			ranks.max() )
 		print ("variance", variance.min(),

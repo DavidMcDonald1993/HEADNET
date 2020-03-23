@@ -37,8 +37,7 @@ class TrainingDataGenerator(Sequence):
 		self.N = len(graph)
 		self.context_size = args.context_size
 		
-
-		self.scaler = StandardScaler()
+		# self.scaler = StandardScaler()
 
 		print ("Built generator")
 
@@ -109,8 +108,7 @@ class TrainingDataGenerator(Sequence):
 
 		#######################
 
-		assert self.context_size == 1
-
+		# assert self.context_size == 1
 
 		# batch_negative_samples = np.concatenate([
 		# 	np.unravel_index(np.searchsorted(

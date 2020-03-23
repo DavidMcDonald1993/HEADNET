@@ -109,9 +109,6 @@ def load_embedding(embedding_filename):
 	return embedding_df
 
 def load_weights(model, embedding_directory):
-
-	# previous_models = sorted(glob.glob(
-	# 	os.path.join(args.embedding_path, "*.h5")))
 	previous_models = sorted(filter(
 		re.compile("[0-9]+\_model\.h5").match, 
 		os.listdir(embedding_directory)
@@ -204,11 +201,12 @@ def determine_positive_and_negative_samples(graph, args):
 				neg_samples = np.zeros((N, N))
 				neg_samples[np.sum(positive_samples[k+1:], 
 					axis=0).nonzero()] = 1
+
 			neg_samples = neg_samples.flatten()
 			neg_samples /= neg_samples.sum(axis=-1, keepdims=True)
 			neg_samples = neg_samples.cumsum(axis=-1)
 			assert np.allclose(neg_samples[..., -1], 1)
-			neg_samples[np.abs(neg_samples - neg_samples.max(axis=-1, keepdims=True)) < 1e-15] = 1 
+			# neg_samples[np.abs(neg_samples - neg_samples.max(axis=-1, keepdims=True)) < 1e-15] = 1 
 			negative_samples.append(neg_samples)
 		
 		return negative_samples
@@ -219,8 +217,6 @@ def determine_positive_and_negative_samples(graph, args):
 	negative_samples = build_negative_samples(positive_samples)
 
 	positive_samples = positive_samples_to_list(positive_samples)
-
-	# assert np.all(positive_samples[:,-1] < args.context_size)
 
 	print ("found {} positive sample pairs".format(
 			len(positive_samples)))
