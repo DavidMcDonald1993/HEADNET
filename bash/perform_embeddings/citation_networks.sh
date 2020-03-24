@@ -5,7 +5,7 @@
 #SBATCH --error=CITATION_%A_%a.err
 #SBATCH --array=0-1799
 #SBATCH --time=10-00:00:00
-#SBATCH --ntasks=10
+#SBATCH --ntasks=5
 #SBATCH --mem=5G
 
 e=25

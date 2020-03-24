@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --job-name=HEADNET
-#SBATCH --output=HEADNET_%A_%a.out
-#SBATCH --error=HEADNET_%A_%a.err
+#SBATCH --job-name=EGO
+#SBATCH --output=EGO_%A_%a.out
+#SBATCH --error=EGO_%A_%a.err
 #SBATCH --array=0-899
 #SBATCH --time=10-00:00:00
-#SBATCH --ntasks=10
+#SBATCH --ntasks=5
 #SBATCH --mem=20G
 
 e=25
