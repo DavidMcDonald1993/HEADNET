@@ -8,7 +8,7 @@
 #SBATCH --ntasks=1
 #SBATCH --mem=15G
 
-datasets=(cora_ml citeseer pubmed twitter gplus cora)
+datasets=(cora_ml citeseer pubmed cora twitter gplus)
 seeds=({0..29})
 
 num_datasets=${#datasets[@]}
