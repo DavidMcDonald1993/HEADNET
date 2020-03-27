@@ -29,7 +29,7 @@ echo $dataset $dim $seed
 
 
 data_dir=datasets/${dataset}
-edgelist=${data_dir}/edgelist.tsv.gz
+graph=${data_dir}/edgelist.tsv.gz
 embedding_dir=embeddings/${dataset}/${exp}
 removed_edges_dir=$(printf nodes/${dataset}/seed=%03d/removed_edges ${seed})
 
@@ -40,7 +40,7 @@ embedding_dir=$(printf \
 echo ${embedding_dir}
 echo ${test_results}
 
-args=$(echo --edgelist ${edgelist} \
+args=$(echo --graph ${graph} \
     --removed_edges_dir ${removed_edges_dir} \
     --dist_fn klh \
     --embedding ${embedding_dir} --seed ${seed} \

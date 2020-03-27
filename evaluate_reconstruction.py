@@ -14,7 +14,7 @@ def parse_args():
 
 	parser = argparse.ArgumentParser(description='Load Embeddings and evaluate reconstruction')
 	
-	parser.add_argument("--edgelist", dest="edgelist", type=str, 
+	parser.add_argument("--graph", dest="graph", type=str, 
 		help="edgelist to load.")
 	parser.add_argument("--features", dest="features", type=str, 
 		help="features to load.")
@@ -73,10 +73,8 @@ def main():
 	test_edges = np.array(test_edges)
 	test_non_edges = np.array(test_non_edges)
 
-
 	print ("number of test edges:", len(test_edges))
 	print ("number of test non edges:", len(test_non_edges))
-
 
 	embedding = load_embedding(args.dist_fn, 
 		args.embedding_directory)

@@ -29,51 +29,68 @@ import glob
 
 def load_data(args):
 
-	edgelist_filename = args.edgelist
+	graph_filename = args.graph
 	features_filename = args.features
 	labels_filename = args.labels
 
-	graph = nx.read_weighted_edgelist(edgelist_filename, delimiter="\t", nodetype=int,
-		create_using=nx.DiGraph() if args.directed else nx.Graph())
+	print ("loading graph from", graph_filename)
 
-	zero_weight_edges = [(u, v) for u, v, w in graph.edges(data="weight") if w == 0.]
-	print ("removing", len(zero_weight_edges), "edges with 0. weight")
-	graph.remove_edges_from(zero_weight_edges)
+	if graph_filename.endswith(".npz"):
+		
+		graph = load_npz(graph_filename)
 
-	print ("ensuring all weights are positive")
-	nx.set_edge_attributes(graph, name="weight", values={edge: abs(weight) 
-		for edge, weight in nx.get_edge_attributes(graph, name="weight").items()})
+	elif graph_filename.endswith(".tsv") or graph_filename.endswith(".tsv.gz"):
 
-	print ("number of nodes: {}\nnumber of edges: {}\n".format(len(graph), len(graph.edges())))
+		graph = nx.read_weighted_edgelist(graph_filename, 
+			delimiter="\t", nodetype=int,
+			create_using=nx.DiGraph() 
+				if args.directed else nx.Graph())
+
+		zero_weight_edges = [(u, v) for u, v, w in graph.edges(data="weight") if w == 0.]
+		print ("removing", len(zero_weight_edges), "edges with 0. weight")
+		graph.remove_edges_from(zero_weight_edges)
+
+		print ("ensuring all weights are positive")
+		nx.set_edge_attributes(graph, name="weight", 
+			values={edge: np.abs(np.int8(weight)) 
+			for edge, weight in nx.get_edge_attributes(graph, name="weight").items()})
+
+		print ("number of nodes: {}\nnumber of edges: {}\n".format(len(graph), len(graph.edges())))
+
+		# graph = nx.convert_node_labels_to_integers(graph, 
+		# 	ordering="sorted")
+
+	else:
+		raise NotImplementedError
+
 
 	if features_filename is not None:
 
 		print ("loading features from {}".format(features_filename))
 
 		if features_filename.endswith(".csv") or features_filename.endswith(".csv.gz"):
-			features = pd.read_csv(features_filename, index_col=0, sep=",")
-			features = [features.reindex(sorted(graph)).values, 
-				features.reindex(sorted(features.index)).values]
+			features = pd.read_csv(features_filename, 
+				index_col=0, sep=",")
+			feattures = features.reindex(sorted(features.index)).values
+			# features = [features.reindex(sorted(graph)).values, 
+			# 	features.reindex(sorted(features.index)).values]
 			print ("no scaling applied")
-			# scaler = StandardScaler()
-			# scaler.fit(features[0])
-			# features = list(map(scaler.transform,
-			# 	features))
-			features = tuple(map(csr_matrix, features))
+			# features = tuple(map(csr_matrix, features))
+			features = csr_matrix(features)
 
 		elif features_filename.endswith(".npz"):
 			
 			features = load_npz(features_filename)
 			assert isinstance(features, csr_matrix)
-
-			features = (features[sorted(graph)], features)
+			# features = (features[sorted(graph)], features)
 
 		else:
-			raise Exception
+			raise NotImplementedError
 
-
-		print ("training features shape is {}".format(features[0].shape))
-		print ("all features shape is {}\n".format(features[1].shape))
+		# print ("training features shape is {}".format(
+		# 	features[0].shape))
+		# print ("all features shape is {}\n".format(
+		# 	features[1].shape))
 
 	else: 
 		features = None
@@ -84,13 +101,15 @@ def load_data(args):
 
 		if labels_filename.endswith(".csv") or labels_filename.endswith(".csv.gz"):
 			labels = pd.read_csv(labels_filename, index_col=0, sep=",")
-			labels = labels.reindex(sorted(graph.nodes())).values.astype(int)#.flatten()
+			labels = labels.reindex(sorted(labels.index))\
+				.values.astype(np.int)
 			assert len(labels.shape) == 2
 		elif labels_filename.endswith(".pkl"):
+			raise Exception
 			with open(labels_filename, "rb") as f:
 				labels = pkl.load(f)
 			labels = np.array([labels[n] 
-				for n in sorted(graph.nodes())], dtype=np.int)
+				for n in sorted(graph)], dtype=np.int)
 		else:
 			raise Exception
 
@@ -99,7 +118,6 @@ def load_data(args):
 	else:
 		labels = None
 
-	graph = nx.convert_node_labels_to_integers(graph, ordering="sorted")
 
 	return graph, features, labels
 
@@ -149,77 +167,23 @@ def minkowski_norm(x):
 
 def determine_positive_and_negative_samples(graph, args):
 
-	def build_positive_samples(graph, k=3):
-		assert k > 0
+	assert args.context_size == 1
 
-		def step(X):
-			X[X>0] = 1    
-			X[X<0] = 0
-			return X
-		
-		N = len(graph)
-		A0 = identity(N, dtype=int)
-		print ("determined 0 hop neighbours")
-		# A1 = step(nx.adjacency_matrix(graph, nodelist=sorted(graph)) - A0)
-		A1 = nx.adjacency_matrix(graph, nodelist=sorted(graph)).tolil()
-		A1.setdiag(0)
-		A1 = A1.tocsr()
-		print ("determined 1 hop neighbours")
-		positive_samples = [A0, A1]
-		for i in range(2, k+1):
-			A_k = step(step(positive_samples[-1].dot(A1)) - step(np.sum(positive_samples, axis=0)))
-			print ("determined", i, "hop neighbours")
-			positive_samples.append(A_k)
-		return positive_samples
+	if isinstance(graph, csr_matrix):
+		print ("graph is sparse adj matrix")
+		positive_samples = np.array(list(zip(*graph.nonzero())))
+		neg_samples = graph.sum(0 ).A.flatten() + graph.sum(1).A.flatten()
+		neg_samples = neg_samples ** .75
+	else:
+		print ("graph is edgelist")
+		positive_samples = np.array(list(graph.edges))
+		neg_samples = np.array(
+			[graph.degree(n) for n in sorted(graph)]
+		) ** .75
 
-	def positive_samples_to_list(positive_samples):
-		l = []
-		for k, ps in enumerate(positive_samples):
-			if k == 0:
-				continue
-			nzx, nzy = np.nonzero(ps)
-			l.append(np.array((nzx, nzy, [k]*len(nzx))))
-		return np.concatenate(l, axis=1).T
+	neg_samples = neg_samples.flatten()
+	neg_samples /= neg_samples.sum(axis=-1, keepdims=True)
+	neg_samples = neg_samples.cumsum(axis=-1)
+	assert np.allclose(neg_samples[..., -1], 1)
 
-	def build_negative_samples(positive_samples):
-		
-		N = positive_samples[0].shape[0]
-		negative_samples = []
-
-		counts = np.sum(positive_samples, axis=0).sum(axis=1).A
-		assert np.all(counts > 0)
-		for k in range(len(positive_samples)):
-			if True or k == args.context_size:
-				# neg_samples = np.ones((N, N), dtype=bool )
-				# neg_samples[
-				# 	np.sum(positive_samples[:k+1], axis=0).nonzero()
-				# ] = 0
-				# assert np.allclose(neg_samples.diagonal(), 0)
-				neg_samples = counts ** .75
-			else:
-				assert False
-				neg_samples = np.zeros((N, N))
-				neg_samples[np.sum(positive_samples[k+1:], 
-					axis=0).nonzero()] = 1
-
-			neg_samples = neg_samples.flatten()
-			neg_samples /= neg_samples.sum(axis=-1, keepdims=True)
-			neg_samples = neg_samples.cumsum(axis=-1)
-			assert np.allclose(neg_samples[..., -1], 1)
-			# neg_samples[np.abs(neg_samples - neg_samples.max(axis=-1, keepdims=True)) < 1e-15] = 1 
-			negative_samples.append(neg_samples)
-		
-		return negative_samples
-
-	positive_samples = build_positive_samples(graph, 
-		k=args.context_size)
-
-	negative_samples = build_negative_samples(positive_samples)
-
-	positive_samples = positive_samples_to_list(positive_samples)
-
-	print ("found {} positive sample pairs".format(
-			len(positive_samples)))
-	
-	return positive_samples, negative_samples
-
+	return positive_samples, neg_samples

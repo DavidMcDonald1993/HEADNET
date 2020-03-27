@@ -8,7 +8,7 @@
 #SBATCH --ntasks=5
 #SBATCH --mem=5G
 
-e=25
+e=5
 
 datasets=(cora_ml citeseer pubmed cora)
 dims=(2 5 10 25 50)
@@ -30,20 +30,25 @@ dim=${dims[$dim_id]}
 seed=${seeds[$seed_id]}
 exp=${exps[$exp_id]}
 
+dataset=cora 
+dim=10
+seed=29
+exp=rn_experiment
+
 echo $dataset $dim $seed $exp
 
 data_dir=datasets/${dataset}
 if [ $exp == "lp_experiment" ]
 then 
-    edgelist=$(printf edgelists/${dataset}/seed=%03d/training_edges/edgelist.tsv ${seed})
+    graph=$(printf edgelists/${dataset}/seed=%03d/training_edges/edgelist.tsv ${seed})
 elif [ $exp == "rn_experiment" ]
 then 
-    edgelist=$(printf nodes/${dataset}/seed=%03d/training_edges/edgelist.tsv ${seed})
+    graph=$(printf nodes/${dataset}/seed=%03d/training_edges/edgelist.tsv ${seed})
 else 
-    edgelist=${data_dir}/edgelist.tsv.gz
+    graph=${data_dir}/graph.npz
 fi
-echo edgelist is $edgelist
-features=${data_dir}/feats.csv.gz
+echo graph is $graph
+features=${data_dir}/feats.npz
 
 embedding_dir=embeddings/${dataset}/$exp
 embedding_dir=$(printf "${embedding_dir}/seed=%03d/dim=%03d" ${seed} ${dim})
@@ -62,9 +67,10 @@ then
         module load TensorFlow/1.10.1-foss-2018b-Python-3.6.6
         pip install --user keras==2.2.4
 
-        args=$(echo --edgelist ${edgelist} --features ${features} \
+        args=$(echo --graph ${graph} --features ${features} \
         --embedding ${embedding_dir} --seed ${seed} \
-        --dim ${dim} --context-size 1 -e ${e})
+        --dim ${dim} --workers 1 -e ${e} \
+        )
 
         python main.py ${args}
 

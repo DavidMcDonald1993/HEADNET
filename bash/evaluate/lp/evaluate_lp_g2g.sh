@@ -36,7 +36,7 @@ k=${ks[$k_id]}
 echo $scale $dataset $dim $seed $k
 
 data_dir=datasets/${dataset}
-edgelist=${data_dir}/edgelist.tsv.gz
+graph=${data_dir}/edgelist.tsv.gz
 removed_edges_dir=$(printf edgelists/${dataset}/seed=%03d/removed_edges ${seed})
 
 test_results=$(printf \
@@ -46,7 +46,7 @@ embedding_dir=$(printf "${embedding_dir}/scale=${scale}/k=${k}/seed=%03d/dim=%03
 echo ${embedding_dir}
 echo ${test_results}
 
-args=$(echo --edgelist ${edgelist} \
+args=$(echo --graph ${graph} \
     --removed_edges_dir ${removed_edges_dir} \
     --dist_fn kle \
     --embedding ${embedding_dir} --seed ${seed} \

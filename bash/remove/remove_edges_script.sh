@@ -22,7 +22,7 @@ seed=${seeds[$seed_id]}
 
 echo $dataset $seed
 
-edgelist=datasets/${dataset}/edgelist.tsv.gz
+gaph=datasets/${dataset}/edgelist.tsv.gz
 output=edgelists/${dataset}
 
 edgelist_f=$(printf "${output}/seed=%03d/training_edges/edgelist.tsv" ${seed} )
@@ -34,7 +34,7 @@ then
 	module load future/0.16.0-foss-2018b-Python-3.6.6
 
 
-	args=$(echo "--edgelist=$edgelist \
+	args=$(echo "--graph=$graph \
 		--output=$output --seed $seed")
 
 	echo $args

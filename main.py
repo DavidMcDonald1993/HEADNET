@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import argparse
 import random
 import numpy as np
@@ -10,7 +10,7 @@ import pandas as pd
 from keras import backend as K
 
 K.set_floatx("float64")
-K.set_epsilon(np.float64(1e-15))
+K.set_epsilon(np.float64(1e-12))
 
 from keras.callbacks import ModelCheckpoint, TerminateOnNaN, EarlyStopping
 
@@ -27,22 +27,20 @@ from evaluation_utils import hyperbolic_distance_hyperboloid, hyperbolic_distanc
 
 np.set_printoptions(suppress=True)
 
-# TensorFlow wizardry
-config = tf.ConfigProto()
+# # TensorFlow wizardry
+# config = tf.ConfigProto()
 
-# Don't pre-allocate memory; allocate as-needed
-config.gpu_options.allow_growth = True
+# # Don't pre-allocate memory; allocate as-needed
+# config.gpu_options.allow_growth = True
  
-# Only allow a total of half the GPU memory to be allocated
-config.gpu_options.per_process_gpu_memory_fraction = 0.5
+# # Only allow a total of half the GPU memory to be allocated
+# # config.gpu_options.per_process_gpu_memory_fraction = 0.5
 
-config.log_device_placement=False
-config.allow_soft_placement=True
+# config.log_device_placement=False
+# config.allow_soft_placement=True
 
-# Create a session with the above options specified.
-K.tensorflow_backend.set_session(tf.Session(config=config))
-
-
+# # Create a session with the above options specified.
+# K.tensorflow_backend.set_session(tf.Session(config=config))
 
 def parse_args():
 	'''
@@ -50,8 +48,8 @@ def parse_args():
 	'''
 	parser = argparse.ArgumentParser(description="HEADNET algorithm for feature learning on complex networks")
 
-	parser.add_argument("--edgelist", dest="edgelist", type=str, default=None,
-		help="edgelist to load.")
+	parser.add_argument("--graph", dest="graph", type=str, default=None,
+		help="path to graph to load.")
 	parser.add_argument("--features", dest="features", type=str, default=None,
 		help="features to load.")
 	parser.add_argument("--labels", dest="labels", type=str, default=None,
@@ -106,7 +104,6 @@ def main():
 	args.directed = True
 
 	assert args.context_size == 1
-
 	assert not (args.visualise and args.embedding_dim > 2), "Can only visualise two dimensions"
 	assert args.embedding_path is not None, "you must specify a path to save embedding"
 
@@ -114,31 +111,42 @@ def main():
 	np.random.seed(args.seed)
 	tf.set_random_seed(args.seed)
 
-	graph, (features_train, features_all), node_labels = load_data(args)
+	graph, features, node_labels = \
+		load_data(args)
 	if not args.visualise and node_labels is not None:
 		node_labels = None
-	assert features_train is not None
+	assert features is not None
 	print ("Loaded dataset")
 
 	configure_paths(args)
 
 	print ("Configured paths")
 
-	nodes = sorted(graph.nodes())
+	# if isinstance(graph, )
+	# nodes = sorted(graph.nodes())
+
+	positive_samples, negative_samples = \
+		determine_positive_and_negative_samples(graph, args)
+
+	if not args.visualise:
+		del graph 
 
 	# build model
-	num_features = features_train.shape[1]
-	
-	embedder, model = build_hyperboloid_asym_model(num_features, 
+	num_features = features.shape[1]
+
+	embedder, model = build_hyperboloid_asym_model(
+		num_features, 
 		args.embedding_dim, 
 		args.num_negative_samples, 
 		lr=args.lr)
-	model, initial_epoch = load_weights(model, args.embedding_path)
+	model, initial_epoch = load_weights(
+		model, 
+		args.embedding_path)
 
 	model.summary()
 
 	best_model_path = os.path.join(args.embedding_path, 
-			"best_model.h5")
+		"best_model.h5")
 
 	callbacks = [
 		TerminateOnNaN(),
@@ -152,31 +160,25 @@ def main():
 			monitor="loss",
 			mode="min"),
 		Checkpointer(epoch=initial_epoch, 
-			nodes=nodes, 
+			# nodes=nodes, 
 			embedding_directory=args.embedding_path,
 			model=model,
 			embedder=embedder,
-			features=features_train,
+			features=features,
 		)
 	]			
 
-	positive_samples, negative_samples = \
-		determine_positive_and_negative_samples(graph, args)
-
 	print ("Training with data generator with {} worker threads".format(args.workers))
 	training_generator = TrainingDataGenerator(
-		features_train,
+		features,
 		positive_samples,  
 		negative_samples,
-		model,
 		args,
-		graph
 	)
 
 	model.fit_generator(training_generator, 
 		workers=args.workers,
-		max_queue_size=10, 
-		# use_multiprocessing=args.workers>0, 
+		max_queue_size=3, 
 		use_multiprocessing=False,
 		epochs=args.num_epochs, 
 		steps_per_epoch=len(training_generator),
@@ -185,6 +187,7 @@ def main():
 		callbacks=callbacks
 	)
 
+
 	print ("Training complete")
 	if os.path.exists(best_model_path):
 		print ("Loading best model from", best_model_path)
@@ -192,7 +195,7 @@ def main():
 
 	print ("saving final embedding")
 
-	embedding, sigmas = embedder.predict(features_all)
+	embedding, sigmas = embedder.predict(features)
 	assert np.isfinite(embedding).all()
 	assert np.isfinite(sigmas).all()
 

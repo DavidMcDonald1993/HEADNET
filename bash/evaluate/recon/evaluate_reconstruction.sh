@@ -27,9 +27,8 @@ seed=${seeds[$seed_id]}
 
 echo $dataset $dim $seed
 
-
 data_dir=datasets/${dataset}
-edgelist=${data_dir}/edgelist.tsv.gz
+graph=${data_dir}/edgelist.tsv.gz
 embedding_dir=embeddings/${dataset}/${exp}
 
 test_results=$(printf \
@@ -39,7 +38,7 @@ embedding_dir=$(printf \
 echo ${embedding_dir}
 echo ${test_results}
 
-args=$(echo --edgelist ${edgelist} --dist_fn klh \
+args=$(echo --graph ${graph} --dist_fn klh \
     --embedding ${embedding_dir} --seed ${seed} \
     --test-results-dir ${test_results})
 echo ${args}

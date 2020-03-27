@@ -52,11 +52,12 @@ def parallel_transport(p, q, x):
 	return x + minkowski_dot(q - alpha * p, x) * (p + q)  / \
 		K.maximum(alpha + 1, K.epsilon())
 
-@function.Defun(tf.float64, tf.float64)
+@function.Defun(K.floatx(), K.floatx())
 def norm_grad(x, dy):
-    return dy*(x/(tf.norm(x) + 1e-12))
+	return dy*(x/(tf.norm(x, axis=-1, keepdims=True) + K.epsilon() ))
 
-@function.Defun(tf.float64, grad_func=norm_grad, 
+@function.Defun(K.floatx(), 
+	grad_func=norm_grad, 
 	shape_func=lambda op: \
 		[op.inputs[0].get_shape().as_list()[:-1] + [1]])
 def norm(x, ):
@@ -74,63 +75,69 @@ def normalise_to_hyperboloid(x):
 	# 	K.sqrt( -minkowski_dot(x, x) )  ,
 	# 	K.epsilon())
 
-def exponential_mapping( p, x ):
+# def exponential_mapping( p, x ):
 
-	# minkowski unit norm
-	r = minkowski_norm(x)
-	# r = norm(x[...,:-1]) # use euclidean norm since x has a 0 t co-ordinate
+# 	# minkowski unit norm
+# 	r = minkowski_norm(x)
+# 	# r = norm(x[...,:-1]) # use euclidean norm since x has a 0 t co-ordinate
 
-	# return K.concatenate([tf.sinh(r) * x[...,:-1], 
-	# 	tf.cosh(r)], axis=-1)
-	# x = tf.sinh(r) * x[..., :-1]
+# 	# return K.concatenate([tf.sinh(r) * x[...,:-1], 
+# 	# 	tf.cosh(r)], axis=-1)
+# 	# x = tf.sinh(r) * x[..., :-1]
 
-	# t = K.sqrt(K.sum(K.square(x), axis=-1, keepdims=True) + 1)
-	# return K.concatenate([x, t], axis=-1)
+# 	# t = K.sqrt(K.sum(K.square(x), axis=-1, keepdims=True) + 1)
+# 	# return K.concatenate([x, t], axis=-1)
 
-	# r = tf.verify_tensor_all_finite(r, "fail after r")
+# 	# r = tf.verify_tensor_all_finite(r, "fail after r")
 
-	# x = x / K.maximum(r, K.epsilon())
-	# x = x / r
+# 	# x = x / K.maximum(r, K.epsilon())
+# 	# x = x / r
 
-	# exp_map = tf.cosh(r) * p + tf.sinh(r) * x
+# 	# exp_map = tf.cosh(r) * p + tf.sinh(r) * x
 
-	######################################
+# 	######################################
 
-	idx = tf.where(r > K.epsilon())[:,0]
+# 	idx = tf.where(r > K.epsilon())[:,0]
 
-	cosh_r = tf.cosh(r)
-	# cosh_r = tf.verify_tensor_all_finite(cosh_r, "fail after cosh")
-	exp_map_p = cosh_r * p
+# 	cosh_r = tf.cosh(r)
+# 	# cosh_r = tf.verify_tensor_all_finite(cosh_r, "fail after cosh")
+# 	exp_map_p = cosh_r * p
 
-	non_zero_norm = tf.gather(r, idx)
+# 	non_zero_norm = tf.gather(r, idx)
 
-	z = tf.gather(x, idx)
+# 	z = tf.gather(x, idx)
 
-	updates = tf.sinh(non_zero_norm) * z
-	# updates = tf.verify_tensor_all_finite(updates, "fail after sinh")
-	dense_shape = tf.shape(p, out_type=tf.int64)
-	exp_map_x = tf.scatter_nd(indices=idx[:,None],
-		updates=updates, 
-		shape=dense_shape)
+# 	updates = tf.sinh(non_zero_norm) * z
+# 	# updates = tf.verify_tensor_all_finite(updates, "fail after sinh")
+# 	dense_shape = tf.shape(p, out_type=tf.int64)
+# 	exp_map_x = tf.scatter_nd(indices=idx[:,None],
+# 		updates=updates, 
+# 		shape=dense_shape)
 
-	exp_map = exp_map_p + exp_map_x
+# 	exp_map = exp_map_p + exp_map_x
 
-	###########################################
+# 	###########################################
 
 
-	# exp_map = tf.verify_tensor_all_finite(exp_map, "fail before normal")
-	exp_map = normalise_to_hyperboloid(exp_map) # account for floating point imprecision
-	# exp_map = tf.verify_tensor_all_finite(exp_map, "fail after normal")
+# 	# exp_map = tf.verify_tensor_all_finite(exp_map, "fail before normal")
+# 	exp_map = normalise_to_hyperboloid(exp_map) # account for floating point imprecision
+# 	# exp_map = tf.verify_tensor_all_finite(exp_map, "fail after normal")
 
-	return exp_map
+# 	return exp_map
 
 def exp_map_0(x):
 	# x = tf.verify_tensor_all_finite(x, "fail exp 0")
 	assert len(x.shape) > 1
 
-	r = norm(x)
+	r = norm(x) 
+
+	# unit norm
+	x = x / K.maximum(r, K.epsilon())
+	# x = tf.keras.backend.l2_normalize(x, axis=-1)
+
 	x = tf.sinh(r) * x
-	t = K.sqrt(K.sum(K.square(x), axis=-1, keepdims=True) + 1)
+	t = tf.cosh(r)
+	# t = K.sqrt(K.sum(K.square(x), axis=-1, keepdims=True) + 1)
 	return K.concatenate([x, t], axis=-1)
 
 

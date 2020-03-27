@@ -14,8 +14,8 @@ def parse_args():
 
 	parser = argparse.ArgumentParser(description='Load Embeddings and evaluate link prediction')
 	
-	parser.add_argument("--edgelist", dest="edgelist", type=str, 
-		help="edgelist to load.")
+	parser.add_argument("--graph", dest="graph", type=str, 
+		help="graph to load.")
 	parser.add_argument("--features", dest="features", type=str, 
 		help="features to load.")
 	parser.add_argument("--labels", dest="labels", type=str, 

@@ -34,7 +34,7 @@ def parse_args():
 	'''
 	parser = argparse.ArgumentParser(description="Script to remove nodes for link prediction experiments")
 
-	parser.add_argument("--edgelist", dest="edgelist", type=str, 
+	parser.add_argument("--graph", dest="graph", type=str, 
 		help="edgelist to load.")
 	parser.add_argument("--features", dest="features", type=str, 
 		help="features to load.")

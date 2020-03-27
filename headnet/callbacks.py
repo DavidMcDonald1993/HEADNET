@@ -14,7 +14,7 @@ class Checkpointer(Callback):
 
 	def __init__(self, 
 		epoch,
-		nodes,
+		# nodes,
 		embedding_directory,
 		model,
 		embedder,
@@ -22,7 +22,7 @@ class Checkpointer(Callback):
 		history=1
 		):
 		self.epoch = epoch
-		self.nodes = nodes
+		# self.nodes = nodes
 		self.embedding_directory = embedding_directory
 		self.model = model
 		self.embedder = embedder
@@ -57,13 +57,16 @@ class Checkpointer(Callback):
 		self.model.save_weights(weights_filename)
 		print ("saving weights to", weights_filename)
 		
-		embedding, variance = self.embedder.predict(self.features)
+		# embedding, variance = self.embedder.predict(self.features)
 
-		embedding = hyperboloid_to_poincare_ball(embedding)
-		print ("embedding", np.linalg.norm(embedding.mean(0)))
-		ranks = np.linalg.norm(embedding, axis=-1)
-		assert (ranks < 1).all()
-		print ("ranks", ranks.min(), ranks.mean(),
-			ranks.max() )
-		print ("variance", variance.min(),
-			variance.mean(), variance.max())
+		# print ("embedding shape:", embedding.shape)
+		# print ("variance shape:", variance.shape)
+
+		# embedding = hyperboloid_to_poincare_ball(embedding)
+		# print ("embedding", np.linalg.norm(embedding.mean(0)))
+		# ranks = np.linalg.norm(embedding, axis=-1)
+		# assert (ranks < 1).all()
+		# print ("ranks", ranks.min(), ranks.mean(),
+		# 	ranks.max() )
+		# print ("variance", variance.min(),
+		# 	variance.mean(), variance.max())

@@ -7,6 +7,8 @@ from matplotlib import patches
 import collections
 import networkx as nx
 
+from scipy.sparse import csr_matrix
+
 '''
 Code obtained from github
 '''
@@ -121,7 +123,11 @@ def draw_geodesic(a, b, c, ax, c1=None, c2=None, verbose=False, width=.02):
 def draw_graph(graph, embedding, labels, path, s=25):
     assert embedding.shape[1] == 2 
 
-    edges = list(graph.edges())
+    if isinstance(graph, csr_matrix):
+        raise NotImplementedError
+        edges = list(zip(*graph.nonzero()))
+    else:
+        edges = list(graph.edges)
 
     if labels is not None:
         # filter out noise nodes labelled as -1

@@ -36,6 +36,7 @@ def map_to_tangent_space_mu_zero(mus):
 		to_tangent_space)
 	# to_tangent_space_mu_zero = tf.verify_tensor_all_finite(to_tangent_space_mu_zero, 
 	# 	"fail after to mu 0")
+
 	# # ignore 0 t coordinate
 	to_tangent_space_mu_zero = to_tangent_space_mu_zero[..., :-1]
 
@@ -87,8 +88,8 @@ def build_hyperboloid_asym_model(num_attributes,
 		num_hidden,
 		activation="relu",
 		# kernel_initializer=initializer,
-		# kernel_regularizer=regularizers.l2(reg),
-		# bias_regularizer=regularizers.l2(reg),
+		kernel_regularizer=regularizers.l2(reg),
+		bias_regularizer=regularizers.l2(reg),
 		name="euclidean_transform",
 	)(input_layer)
 
@@ -116,8 +117,8 @@ def build_hyperboloid_asym_model(num_attributes,
 		embedding_dim, 
 		activation=lambda x: K.elu(x) + 1.,
 		# kernel_initializer=initializer,
-		# kernel_regularizer=regularizers.l2(reg),
-		# bias_regularizer=regularizers.l2(reg),
+		kernel_regularizer=regularizers.l2(reg),
+		bias_regularizer=regularizers.l2(reg),
 		name="dense_to_sigma"
 	)(input_transform)
 
