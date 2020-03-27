@@ -30,11 +30,6 @@ dim=${dims[$dim_id]}
 seed=${seeds[$seed_id]}
 exp=${exps[$exp_id]}
 
-dataset=cora 
-dim=10
-seed=29
-exp=rn_experiment
-
 echo $dataset $dim $seed $exp
 
 data_dir=datasets/${dataset}
