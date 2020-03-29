@@ -3,8 +3,8 @@
 #SBATCH --job-name=CITATION
 #SBATCH --output=CITATION_%A_%a.out
 #SBATCH --error=CITATION_%A_%a.err
-# SBATCH --array=0-1799
-#SBATCH --array=0-2
+#SBATCH --array=0-1799
+# SBATCH --array=0-2
 #SBATCH --time=10-00:00:00
 #SBATCH --ntasks=2
 #SBATCH --mem=5G
@@ -30,8 +30,6 @@ dataset=${datasets[$dataset_id]}
 dim=${dims[$dim_id]}
 seed=${seeds[$seed_id]}
 exp=${exps[$exp_id]}
-
-dim=10
 
 echo $dataset $dim $seed $exp
 
