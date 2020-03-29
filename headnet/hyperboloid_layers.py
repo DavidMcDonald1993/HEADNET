@@ -81,17 +81,9 @@ def normalise_to_hyperboloid(x):
 # 	r = minkowski_norm(x)
 # 	# r = norm(x[...,:-1]) # use euclidean norm since x has a 0 t co-ordinate
 
-# 	# return K.concatenate([tf.sinh(r) * x[...,:-1], 
-# 	# 	tf.cosh(r)], axis=-1)
-# 	# x = tf.sinh(r) * x[..., :-1]
-
-# 	# t = K.sqrt(K.sum(K.square(x), axis=-1, keepdims=True) + 1)
-# 	# return K.concatenate([x, t], axis=-1)
-
 # 	# r = tf.verify_tensor_all_finite(r, "fail after r")
 
 # 	# x = x / K.maximum(r, K.epsilon())
-# 	# x = x / r
 
 # 	# exp_map = tf.cosh(r) * p + tf.sinh(r) * x
 
@@ -118,7 +110,6 @@ def normalise_to_hyperboloid(x):
 
 # 	###########################################
 
-
 # 	# exp_map = tf.verify_tensor_all_finite(exp_map, "fail before normal")
 # 	exp_map = normalise_to_hyperboloid(exp_map) # account for floating point imprecision
 # 	# exp_map = tf.verify_tensor_all_finite(exp_map, "fail after normal")
@@ -130,16 +121,15 @@ def exp_map_0(x):
 	assert len(x.shape) > 1
 
 	r = norm(x) 
-
 	# unit norm
 	x = x / K.maximum(r, K.epsilon())
 	# x = tf.keras.backend.l2_normalize(x, axis=-1)
 
 	x = tf.sinh(r) * x
 	t = tf.cosh(r)
+
 	# t = K.sqrt(K.sum(K.square(x), axis=-1, keepdims=True) + 1)
 	return K.concatenate([x, t], axis=-1)
-
 
 	# mu_zero = K.concatenate([K.zeros_like(x[..., :-1]), 
 	# 	K.ones_like(x[...,-1:])], axis=-1)

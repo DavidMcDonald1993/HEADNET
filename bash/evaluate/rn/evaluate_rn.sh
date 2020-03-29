@@ -25,9 +25,6 @@ dataset=${datasets[$dataset_id]}
 dim=${dims[$dim_id]}
 seed=${seeds[$seed_id]}
 
-echo $dataset $dim $seed
-
-
 data_dir=datasets/${dataset}
 graph=${data_dir}/edgelist.tsv.gz
 embedding_dir=embeddings/${dataset}/${exp}

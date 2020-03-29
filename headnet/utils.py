@@ -174,16 +174,22 @@ def determine_positive_and_negative_samples(graph, args):
 		positive_samples = np.array(list(zip(*graph.nonzero())))
 		neg_samples = graph.sum(0 ).A.flatten() + graph.sum(1).A.flatten()
 		neg_samples = neg_samples ** .75
+		node_map = None
 	else:
 		print ("graph is edgelist")
-		positive_samples = np.array(list(graph.edges))
+		sorted_graph = sorted(graph)
+		positive_samples = np.array(list(graph.edges()))
 		neg_samples = np.array(
-			[graph.degree(n) for n in sorted(graph)]
+			[graph.degree(n) 
+				for n in sorted_graph]
+			# if n in graph else 0
+			# for n in range(2995)]
 		) ** .75
+		node_map = np.array(sorted_graph, dtype=np.int32)
 
-	neg_samples = neg_samples.flatten()
+	# neg_samples = neg_samples.flatten()
 	neg_samples /= neg_samples.sum(axis=-1, keepdims=True)
 	neg_samples = neg_samples.cumsum(axis=-1)
 	assert np.allclose(neg_samples[..., -1], 1)
 
-	return positive_samples, neg_samples
+	return positive_samples, neg_samples, node_map

@@ -125,7 +125,7 @@ def main():
 	# if isinstance(graph, )
 	# nodes = sorted(graph.nodes())
 
-	positive_samples, negative_samples = \
+	positive_samples, negative_samples, node_map = \
 		determine_positive_and_negative_samples(graph, args)
 
 	if not args.visualise:
@@ -173,6 +173,7 @@ def main():
 		features,
 		positive_samples,  
 		negative_samples,
+		node_map,
 		args,
 	)
 

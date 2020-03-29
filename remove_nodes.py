@@ -92,6 +92,10 @@ def main():
 		val_split=0.0,
 		test_split=0.1)
 
+	print ("num train nodes:", len(train_nodes))
+	print ("num val nodes:", len(val_nodes))
+	print ("num test nodes:", len(test_nodes))
+
 	edge_set = set(graph.edges())
 
 	val_edges = [(u, v) for u, v in graph.edges()
