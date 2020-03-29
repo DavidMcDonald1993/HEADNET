@@ -42,7 +42,7 @@ then
 else 
     graph=${data_dir}/graph.npz
 fi
-echo graph is $edgelist
+echo graph is $graph
 features=${data_dir}/feats_top_10000.npz
 
 embedding_dir=embeddings/${dataset}/$exp
