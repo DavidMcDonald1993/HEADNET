@@ -66,7 +66,7 @@ then
         args=$(echo --graph ${graph} --features ${features} \
         --embedding ${embedding_dir} --seed ${seed} \
         --dim ${dim} --workers 1 -e ${e} \
-        --nneg 10)
+        --nneg 10 )
 
         python main.py ${args}
 

@@ -22,12 +22,14 @@ seed=${seeds[$seed_id]}
 
 echo $dataset $seed
 
-gaph=datasets/${dataset}/edgelist.tsv.gz
+# graph=datasets/${dataset}/edgelist.tsv.gz
+graph=datasets/${dataset}/graph.npz
 output=edgelists/${dataset}
 
-edgelist_f=$(printf "${output}/seed=%03d/training_edges/edgelist.tsv" ${seed} )
+# edgelist_f=$(printf "${output}/seed=%03d/training_edges/edgelist.tsv" ${seed} )
+edgelist_f=$(printf "${output}/seed=%03d/training_edges/graph.npz" ${seed} )
 
-if [ ! -f $edgelist_f  ]
+if [ ! -f ${edgelist_f}  ]
 then
 	module purge
 	module load bluebear
@@ -37,11 +39,11 @@ then
 	args=$(echo "--graph=$graph \
 		--output=$output --seed $seed")
 
-	echo $args
+	echo ${args}
 
 	python remove_edges.py ${args}
 else 
 
-	echo $edgelist_f already exists
+	echo ${edgelist_f} already exists
 
 fi

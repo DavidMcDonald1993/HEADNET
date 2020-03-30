@@ -60,9 +60,17 @@ def main():
 	args.directed = True
 
 	graph, _, _ = load_data(args)
-	assert nx.is_directed(graph)
+	# assert nx.is_directed(graph)
 	print ("Loaded dataset")
 	print ()
+
+	if isinstance(graph, nx.DiGraph):
+		graph = nx.adjacency_matrix(graph, 
+			nodelist=sorted(graph),
+			weight=None).astype(bool)
+
+	graph_edges = list(zip(*graph.nonzero()))
+	del graph
 
 	seed = args.seed
 	random.seed(seed)
@@ -108,8 +116,8 @@ def main():
 		embedding, 
 		test_edges,
 		args.dist_fn, 
-		graph_edges=graph.edges()
-		)
+		graph_edges=graph_edges
+	)
 
 	test_results.update({"map_lp": map_lp})
 

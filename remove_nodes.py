@@ -5,6 +5,8 @@ import numpy as np
 import pandas as pd
 import networkx as nx
 
+from scipy.sparse import csr_matrix, save_npz
+
 import argparse
 
 from headnet.utils import load_data
@@ -71,7 +73,7 @@ def main():
 		os.makedirs(removed_edges_dir, exist_ok=True)
 
 	training_edgelist_fn = os.path.join(training_edgelist_dir, 
-		"edgelist.tsv")
+		"graph.npz")
 
 	val_edgelist_fn = os.path.join(removed_edges_dir, 
 		"val_edges.tsv")
@@ -84,10 +86,15 @@ def main():
 	
 	graph, _, _ = load_data(args)
 	print("loaded dataset")
-	assert nx.is_directed(graph)
+
+	if isinstance(graph, nx.DiGraph):
+		graph = nx.adjacency_matrix(graph, 
+			nodelist=sorted(graph),
+			weight=None).astype(bool)
 
 	train_nodes, val_nodes, test_nodes = \
-		split_nodes(list(graph),
+		split_nodes(
+		range(graph.shape[0]),
 		seed,
 		val_split=0.0,
 		test_split=0.1)
@@ -96,23 +103,49 @@ def main():
 	print ("num val nodes:", len(val_nodes))
 	print ("num test nodes:", len(test_nodes))
 
-	edge_set = set(graph.edges())
+	edge_set = set(list(zip(*graph.nonzero())))
 
-	val_edges = [(u, v) for u, v in graph.edges()
-		if u in val_nodes or v in val_nodes]
-	val_non_edges = sample_non_edges(graph, 
-		edge_set, 
-		len(val_edges))
-	test_edges = [(u, v) for u, v in graph.edges()
-		if u in test_nodes or v in test_nodes]
-	test_non_edges = sample_non_edges(graph, 
-		edge_set.union(val_non_edges), 
-		len(test_edges))
+	nodes = set(range(graph.shape[0]))
 
-	print ("writing training edgelist to", training_edgelist_fn)
-	graph = graph.subgraph(train_nodes)
-	nx.write_edgelist(graph, training_edgelist_fn, 
-		delimiter="\t", data=["weight"])
+	if len(val_nodes) > 0:
+		val_edges = [(u, v) for u, v in edge_set
+			if u in val_nodes or v in val_nodes]
+		val_non_edges = sample_non_edges(
+			nodes, 
+			edge_set, 
+			len(val_edges))
+	else:
+		val_edges = []
+		val_non_edges = []
+
+	print ("determinded val edges")
+	
+	if len(test_nodes) > 0:
+		test_edges = [(u, v) for u, v in edge_set
+			if u in test_nodes or v in test_nodes]
+		test_non_edges = sample_non_edges(
+			nodes, 
+			edge_set.union(val_non_edges), 
+			len(test_edges))
+	else:
+		test_edges = []
+		test_non_edges = []
+
+	print ("determinded test edges")
+
+	# graph = graph.subgraph(train_nodes)
+	# nx.write_edgelist(graph, training_edgelist_fn, 
+	# 	delimiter="\t", data=["weight"])
+
+	for edge in val_edges + test_edges:
+		graph[edge] = 0
+	graph.eliminate_zeros()
+
+	print ("removed edges")
+
+	print ("writing training edgelist to", 
+		training_edgelist_fn)
+	save_npz(training_edgelist_fn, graph)
 
 	write_edgelist_to_file(val_edges, val_edgelist_fn)
 	write_edgelist_to_file(val_non_edges, val_non_edgelist_fn)

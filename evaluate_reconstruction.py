@@ -57,16 +57,24 @@ def main():
 	args.directed = True
 
 	graph, _, _ = load_data(args)
-	assert nx.is_directed(graph)
+	# assert nx.is_directed(graph)
 	print ("Loaded dataset")
 	print ()
 
+	if isinstance(graph, nx.DiGraph):
+		graph = nx.adjacency_matrix(graph, 
+			nodelist=sorted(graph),
+			weight=None).astype(bool)
+
 	random.seed(args.seed)
 	
-	test_edges = list(graph.edges())
+	test_edges = list(zip(*graph.nonzero()))
 	num_edges = len(test_edges)
 
-	test_non_edges = sample_non_edges(graph, 
+	nodes = set(range(graph.shape[0]))
+	del graph
+	test_non_edges = sample_non_edges(
+		nodes, 
 		set(test_edges),
 		num_edges)
 
@@ -88,7 +96,8 @@ def main():
 			test_non_edges,
 			args.dist_fn)
 
-	test_results.update({"mean_rank_recon": mean_rank_recon, 
+	test_results.update(
+		{"mean_rank_recon": mean_rank_recon, 
 		"ap_recon": ap_recon,
 		"roc_recon": roc_recon})
 

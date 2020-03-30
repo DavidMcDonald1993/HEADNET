@@ -8,7 +8,7 @@
 #SBATCH --ntasks=5
 #SBATCH --mem=10G
 
-e=5
+e=1
 
 datasets=(twitter gplus)
 dims=(2 5 10 25 50)
@@ -65,7 +65,7 @@ then
         args=$(echo --graph ${graph} --features ${features} \
         --embedding ${embedding_dir} --seed ${seed} \
         --dim ${dim} --workers 1 -e ${e} \
-        --nneg 3)
+        --nneg 3 -v)
 
         python main.py ${args}
 

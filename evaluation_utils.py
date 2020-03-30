@@ -81,7 +81,8 @@ def kullback_leibler_divergence_euclidean(
 		0.5 * (trace + mu_sq_diff - dim - log_det), 
 		axis=-1)
 
-def kullback_leibler_divergence_hyperboloid(source_mus,
+def kullback_leibler_divergence_hyperboloid(
+	source_mus,
 	source_sigmas,
 	target_mus,
 	target_sigmas):

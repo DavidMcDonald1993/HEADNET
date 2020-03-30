@@ -9,7 +9,7 @@ from tensorflow.train import AdamOptimizer, GradientDescentOptimizer, RMSPropOpt
 from headnet.losses import asym_hyperbolic_loss
 from headnet.hyperboloid_layers import logarithmic_map, parallel_transport, exp_map_0
 
-reg = 0e-3
+reg = 1e-4
 # initializer=RandomUniform(-1e-3, 1e-3)
 
 def normalise_to_hyperboloid(x):

@@ -3,6 +3,7 @@ import os
 import random
 import numpy as np
 import networkx as nx
+from scipy.sparse import csr_matrix, save_npz
 
 import argparse
 
@@ -10,7 +11,7 @@ from headnet.utils import load_data
 from remove_utils import sample_non_edges, write_edgelist_to_file
 
 
-def split_edges(graph, 
+def split_edges(nodes, 
 	edges, 
 	seed,
 	val_split=0.05, 
@@ -18,7 +19,7 @@ def split_edges(graph,
 	neg_mul=1,
 	cover=True):
 	
-	assert isinstance(graph, nx.DiGraph)
+	assert isinstance(nodes, set)
 	assert isinstance(edges, list)
 
 	edge_set = set(edges)
@@ -30,7 +31,8 @@ def split_edges(graph,
 	random.shuffle(edges)
 
 	# ensure every node appears in edgelist
-	nodes = set(graph)
+	if not isinstance(nodes, set):
+		nodes = set(nodes)
 	cover = []
 	if cover:
 		for u, v in edges:
@@ -59,11 +61,13 @@ def split_edges(graph,
 
 	print ("determined edge split")
 
-	val_non_edges = sample_non_edges(graph, 
+	val_non_edges = sample_non_edges(
+		nodes, 
 		edge_set, 
 		num_val_edges*neg_mul)
 	print ("determined val non edges")
-	test_non_edges = sample_non_edges(graph,
+	test_non_edges = sample_non_edges(
+		nodes,
 		edge_set.union(val_non_edges),
 		num_test_edges*neg_mul)
 	print ("determined test non edges")
@@ -107,37 +111,53 @@ def main():
 	if not os.path.exists(removed_edges_dir):
 		os.makedirs(removed_edges_dir, exist_ok=True)
 
-	training_edgelist_fn = os.path.join(training_edgelist_dir, "edgelist.tsv")
-	val_edgelist_fn = os.path.join(removed_edges_dir, "val_edges.tsv")
-	val_non_edgelist_fn = os.path.join(removed_edges_dir, "val_non_edges.tsv")
-	test_edgelist_fn = os.path.join(removed_edges_dir, "test_edges.tsv")
-	test_non_edgelist_fn = os.path.join(removed_edges_dir, "test_non_edges.tsv")
+	training_edgelist_fn = os.path.join(training_edgelist_dir, 
+		"graph.npz")
+	val_edgelist_fn = os.path.join(removed_edges_dir, 
+		"val_edges.tsv")
+	val_non_edgelist_fn = os.path.join(removed_edges_dir, 
+		"val_non_edges.tsv")
+	test_edgelist_fn = os.path.join(removed_edges_dir, 
+		"test_edges.tsv")
+	test_non_edgelist_fn = os.path.join(removed_edges_dir, 
+		"test_non_edges.tsv")
 	
 	graph, _, _ = load_data(args)
 	print("loaded dataset")
-	assert nx.is_directed(graph)
 
-	edges = list(graph.edges())
+	if isinstance(graph, nx.DiGraph):
+		graph = nx.adjacency_matrix(graph, 
+			nodelist=sorted(graph),
+			weight=None).astype(bool)
+	# else: 
+	nodes = set(range(graph.shape[0]))
+	edges = list(zip(*graph.nonzero()))
 	print ("enumerated edges")
-	# non_edges = list(nx.non_edges(graph))
-	# print ("enumerated non edges")
 
 	(_, (val_edges, val_non_edges), 
-	(test_edges, test_non_edges)) = split_edges(graph, 
+	(test_edges, test_non_edges)) = split_edges(
+		nodes, 
 		edges, 
-		# non_edges, 
 		seed, 
 		val_split=0)
 
-	print ("number of val edges", len(val_edges), "number of val non edges", len(val_edges))
-	print ("number of test edges", len(test_edges), "number of test non edges", len(test_edges))
+	print ("number of val edges", len(val_edges), 
+		"number of val non edges", len(val_edges))
+	print ("number of test edges", len(test_edges), 
+		"number of test non edges", len(test_edges))
 
-	graph.remove_edges_from(val_edges + test_edges) # remove val and test edges
-	graph.add_edges_from(((u, u, {"weight": 0}) for u in graph.nodes())) # ensure that every node appears at least once by adding self loops
+	# graph.remove_edges_from(val_edges + test_edges) # remove val and test edges
+	# graph.add_edges_from(((u, u, {"weight": 0}) for u in graph.nodes())) # ensure that every node appears at least once by adding self loops
+	
+	# remove val and test edges
+	for edge in val_edges + test_edges:
+		graph[edge] = 0
+	graph.eliminate_zeros()
 
 	print ("removed edges")
 
-	nx.write_edgelist(graph, training_edgelist_fn, delimiter="\t", data=["weight"])
+	# nx.write_edgelist(graph, training_edgelist_fn, delimiter="\t", data=["weight"])
+	save_npz(training_edgelist_fn, graph)
 	write_edgelist_to_file(val_edges, val_edgelist_fn)
 	write_edgelist_to_file(val_non_edges, val_non_edgelist_fn)
 	write_edgelist_to_file(test_edges, test_edgelist_fn)
