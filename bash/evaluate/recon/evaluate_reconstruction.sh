@@ -3,13 +3,13 @@
 #SBATCH --job-name=HEADNETRECON
 #SBATCH --output=HEADNETRECON_%A_%a.out
 #SBATCH --error=HEADNETRECON_%A_%a.err
-#SBATCH --array=0-599
+#SBATCH --array=0-479
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
 #SBATCH --mem=5G
 
 datasets=(cora_ml citeseer pubmed cora)
-dims=(2 5 10 25 50)
+dims=(5 10 25 50)
 seeds=({0..29})
 exp=recon_experiment
 

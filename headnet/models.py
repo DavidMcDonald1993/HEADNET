@@ -10,7 +10,6 @@ from headnet.losses import asym_hyperbolic_loss
 from headnet.hyperboloid_layers import logarithmic_map, parallel_transport, exp_map_0
 
 reg = 1e-4
-# initializer=RandomUniform(-1e-3, 1e-3)
 
 def normalise_to_hyperboloid(x):
 	t = K.sqrt(K.sum(K.square(x), axis=-1, keepdims=True) + 1)
@@ -18,15 +17,11 @@ def normalise_to_hyperboloid(x):
 
 def map_to_tangent_space_mu_zero(mus):
 
-	# mus = tf.verify_tensor_all_finite(mus, "fail at beginning of to_tangent_space_mu_0")
-
 	source_embedding = mus[:,:1]
 	target_embedding = mus[:,1:]
 
 	to_tangent_space = logarithmic_map(source_embedding,
 		target_embedding)
-
-	# to_tangent_space = tf.verify_tensor_all_finite(to_tangent_space, "fail after to tangent space")
 
 	mu_zero = K.concatenate([
 		K.zeros_like(source_embedding[..., :-1]), 
@@ -34,8 +29,6 @@ def map_to_tangent_space_mu_zero(mus):
 	to_tangent_space_mu_zero = parallel_transport(source_embedding,
 		mu_zero,
 		to_tangent_space)
-	# to_tangent_space_mu_zero = tf.verify_tensor_all_finite(to_tangent_space_mu_zero, 
-	# 	"fail after to mu 0")
 
 	# # ignore 0 t coordinate
 	to_tangent_space_mu_zero = to_tangent_space_mu_zero[..., :-1]
@@ -45,9 +38,6 @@ def map_to_tangent_space_mu_zero(mus):
 def kullback_leibler_divergence(args):
 
 	mus, sigmas = args
-
-	# mus = tf.verify_tensor_all_finite(mus, "fail mus kld")
-	# sigmass = tf.verify_tensor_all_finite(sigmas, "fail sigmas kld")
 
 	k = K.int_shape(mus)[-1]
 
@@ -102,12 +92,6 @@ def build_hyperboloid_asym_model(num_attributes,
 		name="dense_to_hyperboloid",
 	)(input_transform)
 
-	# to_hyperboloid = Lambda(lambda x: 
-	# 		exp_map_0(tf.pad(x,
-	# 			tf.constant(
-	# 		[[0, 0]]*(len(x.shape)-1) + [[0, 1]]))),
-	# 	name="to_hyperboloid"
-	# )(hyperboloid_embedding_layer)
 	to_hyperboloid = Lambda(lambda x: 
 			exp_map_0(x),
 		name="to_hyperboloid"

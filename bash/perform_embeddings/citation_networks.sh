@@ -3,7 +3,7 @@
 #SBATCH --job-name=CITATION
 #SBATCH --output=CITATION_%A_%a.out
 #SBATCH --error=CITATION_%A_%a.err
-#SBATCH --array=0-1799
+#SBATCH --array=0-1439
 # SBATCH --array=0-2
 #SBATCH --time=10-00:00:00
 #SBATCH --ntasks=2
@@ -12,7 +12,7 @@
 e=5
 
 datasets=(cora_ml citeseer pubmed cora)
-dims=(2 5 10 25 50)
+dims=(5 10 25 50)
 seeds=({0..29})
 exps=(lp_experiment recon_experiment rn_experiment)
 
@@ -66,7 +66,7 @@ then
         args=$(echo --graph ${graph} --features ${features} \
         --embedding ${embedding_dir} --seed ${seed} \
         --dim ${dim} --workers 1 -e ${e} \
-        --nneg 10 )
+        --nneg 3 )
 
         python main.py ${args}
 

@@ -3,7 +3,7 @@
 #SBATCH --job-name=EGO
 #SBATCH --output=EGO_%A_%a.out
 #SBATCH --error=EGO_%A_%a.err
-#SBATCH --array=0-899
+#SBATCH --array=0-719
 #SBATCH --time=10-00:00:00
 #SBATCH --ntasks=5
 #SBATCH --mem=10G
@@ -11,7 +11,7 @@
 e=5
 
 datasets=(twitter gplus)
-dims=(2 5 10 25 50)
+dims=(5 10 25 50)
 seeds=({0..29})
 exps=(lp_experiment recon_experiment rn_experiment)
 
@@ -65,7 +65,7 @@ then
         args=$(echo --graph ${graph} --features ${features} \
         --embedding ${embedding_dir} --seed ${seed} \
         --dim ${dim} --workers 1 -e ${e} \
-        --nneg 3 -v)
+        --nneg 3)
 
         python main.py ${args}
 
