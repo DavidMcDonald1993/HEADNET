@@ -75,8 +75,6 @@ def main():
 	seed = args.seed
 	random.seed(seed)
 
-	# removed_edges_dir = os.path.join(args.output, 
-	# 	"seed={:03d}".format(seed), "removed_edges")
 	removed_edges_dir = args.removed_edges_dir
 
 	test_edgelist_fn = os.path.join(removed_edges_dir, 
