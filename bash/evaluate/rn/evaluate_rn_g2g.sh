@@ -36,7 +36,8 @@ k=${ks[$k_id]}
 echo $scale $dataset $dim $seed $k
 
 data_dir=datasets/${dataset}
-graph=${data_dir}/edgelist.tsv.gz
+# graph=${data_dir}/edgelist.tsv.gz
+graph=${data_dir}/graph.npz
 removed_edges_dir=$(printf nodes/${dataset}/seed=%03d/removed_edges ${seed})
 
 test_results=$(printf \
@@ -55,6 +56,7 @@ echo ${args}
 
 module purge
 module load bluebear
-module load apps/python3/3.5.2
+# module load apps/python3/3.5.2
+module load future/0.16.0-foss-2018b-Python-3.6.6
 
 python evaluate_lp.py ${args}

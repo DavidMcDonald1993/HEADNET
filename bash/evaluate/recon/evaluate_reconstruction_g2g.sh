@@ -36,7 +36,8 @@ k=${ks[$k_id]}
 echo $scale $dataset $dim $seed $k
 
 data_dir=datasets/${dataset}
-graph=${data_dir}/edgelist.tsv.gz
+# graph=${data_dir}/edgelist.tsv.gz
+graph=${data_dir}/graph.npz
 embedding_dir=../graph2gauss/embeddings/${dataset}/feats/${exp}
 embedding_dir=$(printf "${embedding_dir}/scale=${scale}/k=${k}/seed=%03d/dim=%03d/" ${seed} ${dim})
 
@@ -53,6 +54,7 @@ echo ${args}
 
 module purge
 module load bluebear
-module load apps/python3/3.5.2
+# module load apps/python3/3.5.2
+module load future/0.16.0-foss-2018b-Python-3.6.6
 
 python evaluate_reconstruction.py ${args}
