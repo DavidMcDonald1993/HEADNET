@@ -101,7 +101,8 @@ def main():
 		"ap_recon": ap_recon,
 		"roc_recon": roc_recon})
 
-	map_recon, precisions_at_k = evaluate_mean_average_precision(
+	map_recon, precisions_at_k = \
+		evaluate_mean_average_precision(
 		embedding, 
 		test_edges,
 		args.dist_fn)

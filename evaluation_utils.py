@@ -12,6 +12,8 @@ import fcntl
 
 import random
 
+import types
+
 def euclidean_distance(u, v):
 	return np.linag.norm(u - v, axis=-1)
 
@@ -205,26 +207,42 @@ def load_embedding(dist_fn, embedding_directory):
 		source, target = load_st(embedding_directory)
 		return source, target
 
-def compute_scores(u, v, dist_fn):
+def compute_scores(U, V, dist_fn):
+	assert isinstance(U, types.GeneratorType)
+	assert isinstance(V, types.GeneratorType)
 
 	if dist_fn == "hyperboloid":
+		raise NotImplementedError
 		scores = -hyperbolic_distance_hyperboloid(u, v)
 	elif dist_fn == "poincare":
+		raise NotImplementedError
 		scores = -hyperbolic_distance_poincare(u, v)
 	elif dist_fn == "euclidean":
+		raise NotImplementedError
 		scores = -euclidean_distance(u, v)
 	elif dist_fn == "klh":
-		assert isinstance(u, tuple)
-		assert isinstance(v, tuple)
-		scores = -kullback_leibler_divergence_hyperboloid(
-			u[0], u[1], v[0], v[1])
+		# assert isinstance(u, tuple)
+		# assert isinstance(v, tuple)
+		# scores = -kullback_leibler_divergence_hyperboloid(
+		# 	u[0], u[1], v[0], v[1])
+		# if isinstance(U, types.GeneratorType) and \
+		# 	isinstance(V, types.GeneratorType):
+		scores = -np.concatenate([
+			kullback_leibler_divergence_hyperboloid(u[0], u[1], v[0], v[1])
+			for u, v in zip(U, V)
+		])
 	elif dist_fn == "kle":
-		assert isinstance(u, tuple)
-		assert isinstance(v, tuple)
-		scores = -kullback_leibler_divergence_euclidean(
-			u[0], u[1], v[0], v[1])
+		# assert isinstance(u, tuple)
+		# assert isinstance(v, tuple)
+		# scores = -kullback_leibler_divergence_euclidean(
+		# 	u[0], u[1], v[0], v[1])
+		scores = -np.concatenate([
+			kullback_leibler_divergence_euclidean(u[0], u[1], v[0], v[1])
+			for u, v in zip(U, V)
+		])
 	elif dist_fn == "st":
-		scores = -euclidean_distance(embedding[0], embedding[1])
+		raise NotImplementedError
+		scores = -euclidean_distance(u, v)
 
 	return scores
 
@@ -234,8 +252,10 @@ def evaluate_mean_average_precision(
 	dist_fn,
 	graph_edges=None,
 	ks=(1,3,5,10),
-	max_non_neighbours=1000
+	max_non_neighbours=1000,
+	chunk_size=10000,
 	):
+	print ("evaluating mAP and p@k")
 
 	if isinstance(embedding, tuple):
 		N, _  = embedding[0].shape
@@ -249,6 +269,7 @@ def evaluate_mean_average_precision(
 		if u not in edgelist_dict:
 			edgelist_dict.update({u: set()})
 		edgelist_dict[u].add(v)
+
 
 	if graph_edges:
 		graph_edgelist_dict = {}
@@ -275,14 +296,20 @@ def evaluate_mean_average_precision(
 				k=max_non_neighbours,)
 
 		neighbours = true_neighbours + non_neighbours
+		num_chunks = int(np.ceil(len(neighbours) / chunk_size))
 
 		if isinstance(embedding, tuple):
+			assert dist_fn in ("klh", "kle")
+			means, variances = embedding
 			scores = compute_scores(
-				(embedding[0][u:u+1], embedding[1][u:u+1]), 
-				(embedding[0][neighbours], 
-					embedding[1][neighbours]), 
+				((means[u:u+1], variances[u:u+1]) 
+					for _ in range(num_chunks)),
+				((means[neighbours[j*chunk_size:(j+1)*chunk_size]], 
+					variances[neighbours[j*chunk_size:(j+1)*chunk_size]]) 
+					for j in range(num_chunks)),
 				dist_fn)
 		else:
+			raise NotImplementedError
 			scores = compute_scores(
 				embedding[u:u+1], 
 				embedding[neighbours],
@@ -314,6 +341,9 @@ def evaluate_mean_average_precision(
 	pks = {k: (np.mean(v) if len(v) > 0 else 0)
 			for k, v in pks.items()}
 
+	print ("done")
+	raise SystemExit
+
 	return mAP, pks
 
 def evaluate_rank_AUROC_AP(
@@ -322,6 +352,7 @@ def evaluate_rank_AUROC_AP(
 	test_non_edges, 
 	dist_fn,
 	):
+	print ("evaluating rank, AUROC and AP")
 
 	edge_scores = get_scores(
 		embedding,
@@ -352,23 +383,42 @@ def evaluate_rank_AUROC_AP(
 
 	return ranks, ap_score, auc_score
 
-def get_scores(embedding, edges, dist_fn):
-	if isinstance(embedding, tuple):
-		embedding, embedding_ = embedding
-		print ("embedding is tuple")
-		print ("embedding shape is", embedding.shape)
-		print ("embedding_ shape is", embedding_.shape)
+def get_scores(embedding, 
+	edges, 
+	dist_fn, 
+	chunk_size=10000):
+	print ("computing scores")
 
-		embedding_u = (embedding[edges[:,0]], 
-			embedding_[edges[:,0]])
-		embedding_v = (embedding[edges[:,1]], 
-			embedding_[edges[:,1]])
+	num_chunks = int(np.ceil(edges.shape[0]  / chunk_size))
+
+	if dist_fn in ("kle", "klh"):
+		means, variances = embedding
+
+		# embedding_u = (means[edges[:,0]], 
+		# 	variances[edges[:,0]])
+		# embedding_v = (means[edges[:,1]], 
+		# 	variances[edges[:,1]])
+		embedding_u = (
+			(means[edges[i*chunk_size:(i+1)*chunk_size, 0]], 
+				variances[edges[i*chunk_size:(i+1)*chunk_size, 0]])
+			for i in range(num_chunks)
+		)
+		embedding_v = (
+			(means[edges[i*chunk_size:(i+1)*chunk_size, 1]], 
+				variances[edges[i*chunk_size:(i+1)*chunk_size, 1]])
+			for i in range(num_chunks)
+		)
+
+	# elif dist_fn == "st":
+	# 	source, target = embedding
+	# 	embedding_u = source[edges[:,0]]
+	# 	embedding_v = target[edges[:,1]]
 
 	else:
-		print ("embedding shape is", embedding.shape)
+		raise NotImplementedError
+		# embedding_u = embedding[edges[:,0]]
+		# embedding_v = embedding[edges[:,1]]
 
-		embedding_u = embedding[test_edges[:,0]]
-		embedding_v = embedding[test_edges[:,1]]
 
 	return compute_scores(embedding_u, embedding_v, dist_fn)
 

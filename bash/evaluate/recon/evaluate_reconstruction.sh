@@ -28,7 +28,8 @@ seed=${seeds[$seed_id]}
 echo $dataset $dim $seed
 
 data_dir=datasets/${dataset}
-graph=${data_dir}/edgelist.tsv.gz
+# graph=${data_dir}/edgelist.tsv.gz
+graph=${data_dir}/graph.npz
 embedding_dir=embeddings/${dataset}/${exp}
 
 test_results=$(printf \

@@ -11,3 +11,4 @@ evaluate_nc.py
 cleanup_embeddings.py
 test_results
 collated_results
+*.zip

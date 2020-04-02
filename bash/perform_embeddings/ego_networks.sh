@@ -8,7 +8,7 @@
 #SBATCH --ntasks=5
 #SBATCH --mem=10G
 
-e=1
+e=5
 
 datasets=(twitter gplus)
 dims=(2 5 10 25 50)
@@ -72,9 +72,9 @@ then
     fi
 
     echo compressing ${embedding_dir}/final_embedding.csv
-    gzip -f ${embedding_dir}/final_embedding.csv
+    gzip ${embedding_dir}/final_embedding.csv
     echo compressing ${embedding_dir}/final_variance.csv
-    gzip -f ${embedding_dir}/final_variance.csv
+    gzip ${embedding_dir}/final_variance.csv
 else
 
     echo ${embedding_dir}/final_embedding.csv.gz already exists
