@@ -10,11 +10,15 @@ from keras.callbacks import Callback
 
 from headnet.utils import hyperboloid_to_poincare_ball
 
+def minkowski_dot(x, y):
+	assert len(x.shape) == len(y.shape)
+	return np.sum(x[...,:-1] * y[...,:-1], axis=-1, keepdims=True) - x[...,-1:] * y[...,-1:]
+
+
 class Checkpointer(Callback):
 
 	def __init__(self, 
 		epoch,
-		# nodes,
 		embedding_directory,
 		model,
 		embedder,
@@ -22,7 +26,6 @@ class Checkpointer(Callback):
 		history=1
 		):
 		self.epoch = epoch
-		# self.nodes = nodes
 		self.embedding_directory = embedding_directory
 		self.model = model
 		self.embedder = embedder
@@ -58,6 +61,8 @@ class Checkpointer(Callback):
 		print ("saving weights to", weights_filename)
 		
 		# embedding, variance = self.embedder.predict(self.features)
+
+		# assert np.allclose(minkowski_dot(embedding, embedding), -1)
 
 		# print ("embedding shape:", embedding.shape)
 		# print ("variance shape:", variance.shape)

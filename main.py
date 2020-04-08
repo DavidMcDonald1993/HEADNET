@@ -10,7 +10,7 @@ import pandas as pd
 from keras import backend as K
 
 K.set_floatx("float64")
-K.set_epsilon(np.float64(1e-12))
+K.set_epsilon(np.float64(1e-15))
 
 from keras.callbacks import ModelCheckpoint, TerminateOnNaN, EarlyStopping
 
@@ -68,8 +68,8 @@ def parse_args():
 		help="Number of negative samples for training (default is 10).")
 	parser.add_argument("--context-size", dest="context_size", type=int, default=1,
 		help="Context size for generating positive samples (default is 1).")
-	parser.add_argument("--patience", dest="patience", type=int, default=3,
-		help="The number of epochs of no improvement in loss before training is stopped. (Default is 3)")
+	parser.add_argument("--patience", dest="patience", type=int, default=25,
+		help="The number of epochs of no improvement in loss before training is stopped. (Default is 25)")
 
 	parser.add_argument("-d", "--dim", dest="embedding_dim", type=int,
 		help="Dimension of embeddings for each layer (default is 10).", default=10)
@@ -122,9 +122,6 @@ def main():
 
 	print ("Configured paths")
 
-	# if isinstance(graph, )
-	# nodes = sorted(graph.nodes())
-
 	positive_samples, negative_samples, node_map = \
 		determine_positive_and_negative_samples(graph, args)
 
@@ -160,12 +157,10 @@ def main():
 			monitor="loss",
 			mode="min"),
 		Checkpointer(epoch=initial_epoch, 
-			# nodes=nodes, 
 			embedding_directory=args.embedding_path,
 			model=model,
 			embedder=embedder,
-			features=features,
-		)
+			features=features,)
 	]			
 
 	print ("Training with data generator with {} worker threads".format(args.workers))
@@ -177,15 +172,31 @@ def main():
 		args,
 	)
 
+	# X = None
+	# y = None
+	# num_steps = len(training_generator)
+
+	# for i in range(num_steps):
+	# 	X_, y_ = training_generator[i]
+	# 	if X is None:
+	# 		X = X_
+	# 		y = y_
+	# 	else:
+	# 		X = np.concatenate([X, X_], axis=0)
+	# 		y = np.append(y, y_)
+
+	# print (X.shape, y.shape)
+	# raise SystemExit
+
+	# model.fit(X, y, 
+		# batch_size=args.batch_size,
 	model.fit_generator(training_generator, 
 		workers=args.workers,
-		max_queue_size=3, 
 		use_multiprocessing=False,
 		epochs=args.num_epochs, 
-		steps_per_epoch=len(training_generator),
 		initial_epoch=initial_epoch, 
 		verbose=args.verbose,
-		callbacks=callbacks
+		callbacks=callbacks,
 	)
 
 

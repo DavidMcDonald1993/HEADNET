@@ -72,25 +72,16 @@ def load_data(args):
 			features = pd.read_csv(features_filename, 
 				index_col=0, sep=",")
 			feattures = features.reindex(sorted(features.index)).values
-			# features = [features.reindex(sorted(graph)).values, 
-			# 	features.reindex(sorted(features.index)).values]
 			print ("no scaling applied")
-			# features = tuple(map(csr_matrix, features))
 			features = csr_matrix(features)
 
 		elif features_filename.endswith(".npz"):
 			
 			features = load_npz(features_filename)
 			assert isinstance(features, csr_matrix)
-			# features = (features[sorted(graph)], features)
 
 		else:
 			raise NotImplementedError
-
-		# print ("training features shape is {}".format(
-		# 	features[0].shape))
-		# print ("all features shape is {}\n".format(
-		# 	features[1].shape))
 
 	else: 
 		features = None
@@ -182,8 +173,6 @@ def determine_positive_and_negative_samples(graph, args):
 		neg_samples = np.array(
 			[graph.degree(n) 
 				for n in sorted_graph]
-			# if n in graph else 0
-			# for n in range(2995)]
 		) ** .75
 		node_map = np.array(sorted_graph, dtype=np.int32)
 
@@ -191,5 +180,7 @@ def determine_positive_and_negative_samples(graph, args):
 	neg_samples /= neg_samples.sum(axis=-1, keepdims=True)
 	neg_samples = neg_samples.cumsum(axis=-1)
 	assert np.allclose(neg_samples[..., -1], 1)
+
+	print ("found", positive_samples.shape[0], "positive samples")
 
 	return positive_samples, neg_samples, node_map
