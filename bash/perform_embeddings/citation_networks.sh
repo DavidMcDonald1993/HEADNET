@@ -9,7 +9,7 @@
 #SBATCH --ntasks=2
 #SBATCH --mem=5G
 
-e=5
+e=1000
 
 datasets=(cora_ml citeseer pubmed cora)
 dims=(5 10 25 50)
@@ -36,10 +36,10 @@ echo $dataset $dim $seed $exp
 data_dir=datasets/${dataset}
 if [ $exp == "lp_experiment" ]
 then 
-    graph=$(printf edgelists/${dataset}/seed=%03d/training_edges/edgelist.tsv ${seed})
+    graph=$(printf edgelists/${dataset}/seed=%03d/training_edges/graph.npz ${seed})
 elif [ $exp == "rn_experiment" ]
 then 
-    graph=$(printf nodes/${dataset}/seed=%03d/training_edges/edgelist.tsv ${seed})
+    graph=$(printf nodes/${dataset}/seed=%03d/training_edges/graph.npz ${seed})
 else 
     graph=${data_dir}/graph.npz
 fi
@@ -66,7 +66,7 @@ then
         args=$(echo --graph ${graph} --features ${features} \
         --embedding ${embedding_dir} --seed ${seed} \
         --dim ${dim} --workers 1 -e ${e} \
-        --nneg 3 )
+        --nneg 3 -v  )
 
         python main.py ${args}
 

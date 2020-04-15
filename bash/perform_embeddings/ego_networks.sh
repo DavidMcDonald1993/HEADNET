@@ -5,7 +5,7 @@
 #SBATCH --error=EGO_%A_%a.err
 #SBATCH --array=0-719
 #SBATCH --time=10-00:00:00
-#SBATCH --ntasks=5
+#SBATCH --ntasks=2
 #SBATCH --mem=10G
 
 e=5
@@ -35,10 +35,10 @@ echo $dataset $dim $seed $exp
 data_dir=datasets/${dataset}
 if [ $exp == "lp_experiment" ]
 then 
-    graph=$(printf edgelists/${dataset}/seed=%03d/training_edges/edgelist.tsv ${seed})
+    graph=$(printf edgelists/${dataset}/seed=%03d/training_edges/graph.npz ${seed})
 elif [ $exp == "rn_experiment" ]
 then 
-    graph=$(printf nodes/${dataset}/seed=%03d/training_edges/edgelist.tsv ${seed})
+    graph=$(printf nodes/${dataset}/seed=%03d/training_edges/graph.npz ${seed})
 else 
     graph=${data_dir}/graph.npz
 fi
