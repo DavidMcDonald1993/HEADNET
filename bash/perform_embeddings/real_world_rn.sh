@@ -34,9 +34,6 @@ seed=${seeds[$seed_id]}
 exp=${exps[$exp_id]}
 feat=${feats[$feat_id]}
 
-dataset=cora 
-dim=25 
-
 echo $dataset $dim $seed $exp $feat
 
 data_dir=datasets/${dataset}
@@ -66,8 +63,8 @@ then
     then 
         echo ${embedding_dir}/final_embedding.csv is missing -- performing embedding 
 
-        # module load TensorFlow/1.10.1-foss-2018b-Python-3.6.6
-        # pip install --user keras==2.2.4
+        module load TensorFlow/1.10.1-foss-2018b-Python-3.6.6
+        pip install --user keras==2.2.4
 
         args=$(echo --graph ${graph} \
         --embedding ${embedding_dir} --seed ${seed} \
