@@ -1,6 +1,6 @@
 import keras.backend as K
 import tensorflow as tf 
-from keras.layers import Input, Dense, Lambda, Reshape, Concatenate, BatchNormalization
+from keras.layers import Input, Dense, Lambda, Embedding
 from keras.models import Model
 from keras.initializers  import RandomUniform
 from keras import regularizers
@@ -69,29 +69,44 @@ def kullback_leibler_divergence(args):
 	kld = K.squeeze(kld, axis=-1)
 	return K.squeeze(kld, axis=-1)
 
-def build_hyperboloid_asym_model(num_features, 
+def build_headnet(
+	N,
+	features, 
 	embedding_dim, 
 	num_negative_samples, 
-	num_hidden=128,
-	lr=1e-1):
+	num_hidden=128,):
 
-	input_layer = Input((num_features,),
-		name="input_layer")
+	if features is not None: # HEADNet with attributes
 
-	input_transform = Dense(
-		num_hidden,
-		activation="relu",
-		kernel_initializer=initializer,
-		kernel_regularizer=regularizers.l2(reg),
-		bias_regularizer=regularizers.l2(reg),
-		name="euclidean_transform",
-	)(input_layer)
+		print("training using attributes")
+
+		input_layer = Input((features.shape[1],),
+			name="attributed_input_layer")
+
+		input_transform = Dense(
+			num_hidden,
+			activation="relu",
+			kernel_initializer=initializer,
+			kernel_regularizer=regularizers.l2(reg),
+			bias_regularizer=regularizers.l2(reg),
+			name="euclidean_transform",
+		)(input_layer)
+
+	else:
+
+		print("training without using attributes")
+
+		input_layer = Input((1,), 
+			name="unattributed_input_layer")
+		input_transform = Embedding(N,
+			num_hidden)(input_layer)
+
 
 	hyperboloid_embedding_layer = Dense(
 		embedding_dim, 
 		kernel_initializer=initializer,
-		# kernel_regularizer=regularizers.l2(reg),
-		# bias_regularizer=regularizers.l2(reg),
+		kernel_regularizer=regularizers.l2(reg),
+		bias_regularizer=regularizers.l2(reg),
 		name="dense_to_hyperboloid",
 	)(input_transform)
 
@@ -114,9 +129,16 @@ def build_hyperboloid_asym_model(num_features,
 		[to_hyperboloid, sigma_layer],
 		name="embedder_model")
 
-	trainable_input = Input(
-		(1 + num_negative_samples, 2, num_features, ),
-		name="trainable_input")
+	if features is not None:
+
+		trainable_input = Input(
+			(1 + num_negative_samples, 2, num_features, ),
+			name="trainable_input_attributed")
+	else:
+
+		trainable_input = Input(
+			(1 + num_negative_samples, 2, ),
+			name="trainable_input_non_attributed")
 
 	mus, sigmas = embedder_model(trainable_input)
 

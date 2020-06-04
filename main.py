@@ -1,7 +1,7 @@
 from __future__ import print_function
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import argparse
 import random
 import numpy as np
@@ -21,7 +21,7 @@ from headnet.utils import  determine_positive_and_negative_samples, load_weights
 from headnet.generators import TrainingDataGenerator
 from headnet.visualise import draw_graph, plot_degree_dist
 from headnet.callbacks import Checkpointer
-from headnet.models import build_hyperboloid_asym_model
+from headnet.models import build_headnet
 
 from evaluation_utils import hyperbolic_distance_hyperboloid, hyperbolic_distance_poincare
 
@@ -57,8 +57,6 @@ def parse_args():
 
 	parser.add_argument("--seed", dest="seed", type=int, default=0,
 		help="Random seed (default is 0).")
-	parser.add_argument("--lr", dest="lr", type=np.float64, default=.1,
-		help="Learning rate (default is .1).")
 
 	parser.add_argument("-e", "--num_epochs", dest="num_epochs", type=int, default=50,
 		help="The number of epochs to train for (default is 50).")
@@ -68,8 +66,8 @@ def parse_args():
 		help="Number of negative samples for training (default is 10).")
 	parser.add_argument("--context-size", dest="context_size", type=int, default=1,
 		help="Context size for generating positive samples (default is 1).")
-	parser.add_argument("--patience", dest="patience", type=int, default=25,
-		help="The number of epochs of no improvement in loss before training is stopped. (Default is 25)")
+	parser.add_argument("--patience", dest="patience", type=int, default=100,
+		help="The number of epochs of no improvement in loss before training is stopped. (Default is 100)")
 
 	parser.add_argument("-d", "--dim", dest="embedding_dim", type=int,
 		help="Dimension of embeddings for each layer (default is 10).", default=10)
@@ -115,7 +113,7 @@ def main():
 		load_data(args)
 	if not args.visualise and node_labels is not None:
 		node_labels = None
-	assert features is not None
+	# assert features is not None
 	print ("Loaded dataset")
 
 	configure_paths(args)
@@ -125,17 +123,17 @@ def main():
 	positive_samples, negative_samples, node_map = \
 		determine_positive_and_negative_samples(graph, args)
 
+	N = graph.shape[0]
+
 	if not args.visualise:
 		del graph 
 
 	# build model
-	num_features = features.shape[1]
-
-	embedder, model = build_hyperboloid_asym_model(
-		num_features, 
+	embedder, model = build_headnet(
+		N,
+		features, 
 		args.embedding_dim, 
-		args.num_negative_samples, 
-		lr=args.lr)
+		args.num_negative_samples, )
 	model, initial_epoch = load_weights(
 		model, 
 		args.embedding_path)
@@ -172,27 +170,10 @@ def main():
 		args,
 	)
 
-	# X = None
-	# y = None
-	# num_steps = len(training_generator)
-
-	# for i in range(num_steps):
-	# 	X_, y_ = training_generator[i]
-	# 	if X is None:
-	# 		X = X_
-	# 		y = y_
-	# 	else:
-	# 		X = np.concatenate([X, X_], axis=0)
-	# 		y = np.append(y, y_)
-
-	# print (X.shape, y.shape)
-	# raise SystemExit
-
-	# model.fit(X, y, 
-		# batch_size=args.batch_size,
 	model.fit_generator(training_generator, 
 		workers=args.workers,
 		use_multiprocessing=False,
+		steps_per_epoch=len(training_generator),
 		epochs=args.num_epochs, 
 		initial_epoch=initial_epoch, 
 		verbose=args.verbose,
@@ -207,7 +188,13 @@ def main():
 
 	print ("saving final embedding")
 
-	embedding, sigmas = embedder.predict(features)
+	if features is not None:
+		embedding, sigmas = embedder.predict(features)
+	else:
+		embedding, sigmas = embedder.predict(np.arange(N))
+		embedding = np.squeeze(embedding, 1)
+		sigmas = np.squeeze(sigmas, 1)
+
 	assert np.isfinite(embedding).all()
 	assert np.isfinite(sigmas).all()
 

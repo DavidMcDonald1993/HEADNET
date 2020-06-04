@@ -41,14 +41,8 @@ class TrainingDataGenerator(Sequence):
 	def __len__(self):
 		return int(np.ceil(self.num_positive_samples / \
 				self.batch_size))
-		# return max(1000, 
-		# 	int(np.ceil(self.num_positive_samples / \
-		# 		self.batch_size)))
 
 	def __getitem__(self, batch_idx):
-
-		# print ("{}: {}".format(batch_idx, 
-		# 	threading.current_thread()))
 
 		batch_size = self.batch_size
 		positive_samples = self.positive_samples
@@ -57,9 +51,6 @@ class TrainingDataGenerator(Sequence):
 		num_positive_samples = self.num_positive_samples
 		node_map = self.node_map
 
-		# idx = np.random.choice(num_positive_samples, 
-		# 	size=batch_size)
-		# batch_positive_samples = positive_samples[idx]
 
 		batch_positive_samples = positive_samples[
 			batch_idx * batch_size : \
@@ -80,11 +71,11 @@ class TrainingDataGenerator(Sequence):
 			(batch_positive_samples, batch_negative_samples),
 			axis=1)
 
-		# shape = list(training_sample.shape)
-		training_sample = training_sample.flatten()
-		training_sample = self.features[training_sample].A
-		training_sample = training_sample.reshape(
-			batch_size, 1 + num_negative_samples, 2, -1)
+		if self.features is not None:
+			training_sample = training_sample.flatten()
+			training_sample = self.features[training_sample].A
+			training_sample = training_sample.reshape(
+				batch_size, 1 + num_negative_samples, 2, -1)
 
 		target = np.zeros((batch_size, 1), dtype=int,)
 

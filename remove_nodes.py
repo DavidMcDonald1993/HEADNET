@@ -72,8 +72,8 @@ def main():
 	if not os.path.exists(removed_edges_dir):
 		os.makedirs(removed_edges_dir, exist_ok=True)
 
-	training_edgelist_fn = os.path.join(training_edgelist_dir, 
-		"graph.npz")
+	# training_edgelist_fn = os.path.join(training_edgelist_dir, 
+	# 	"graph.npz")
 
 	val_edgelist_fn = os.path.join(removed_edges_dir, 
 		"val_edges.tsv")
@@ -92,20 +92,23 @@ def main():
 			nodelist=sorted(graph),
 			weight=None).astype(bool)
 
+	nodes = range(graph.shape[0])
 	train_nodes, val_nodes, test_nodes = \
 		split_nodes(
-		range(graph.shape[0]),
+		nodes,
 		seed,
 		val_split=0.0,
 		test_split=0.1)
+
+	removed_nodes = np.append(val_nodes, test_nodes)
+	for u in removed_nodes:
+		assert u not in train_nodes
 
 	print ("num train nodes:", len(train_nodes))
 	print ("num val nodes:", len(val_nodes))
 	print ("num test nodes:", len(test_nodes))
 
 	edge_set = set(list(zip(*graph.nonzero())))
-
-	nodes = set(range(graph.shape[0]))
 
 	if len(val_nodes) > 0:
 		val_edges = [(u, v) for u, v in edge_set
@@ -118,34 +121,56 @@ def main():
 		val_edges = []
 		val_non_edges = []
 
-	print ("determinded val edges")
+	print ("determined val edges")
 	
 	if len(test_nodes) > 0:
 		test_edges = [(u, v) for u, v in edge_set
 			if u in test_nodes or v in test_nodes]
 		test_non_edges = sample_non_edges(
 			nodes, 
-			edge_set.union(val_non_edges), 
+			edge_set.union(val_non_edges), # do not sample val edges
 			len(test_edges))
 	else:
 		test_edges = []
 		test_non_edges = []
 
-	print ("determinded test edges")
-
-	# graph = graph.subgraph(train_nodes)
-	# nx.write_edgelist(graph, training_edgelist_fn, 
-	# 	delimiter="\t", data=["weight"])
+	print ("determined test edges")
 
 	for edge in val_edges + test_edges:
 		graph[edge] = 0
 	graph.eliminate_zeros()
 
+	for u, v in val_edges:
+		assert not graph[u, v]
+	for u, v in test_edges:
+		assert not graph[u, v]
+
+	for u in removed_nodes:
+		assert not graph[u].A.flatten().any()
+		assert not graph.T[u].A.flatten().any()
+
 	print ("removed edges")
 
+
+	training_sparse_filename = os.path.join(training_edgelist_dir,
+		"graph.npz")
+	print ("writing adjacency matrix to", 
+		training_sparse_filename)
+	save_npz(training_sparse_filename, graph)
+
+	training_edgelist_filename = os.path.join(training_edgelist_dir, 
+		"edgelist.tsv.gz")
 	print ("writing training edgelist to", 
-		training_edgelist_fn)
-	save_npz(training_edgelist_fn, graph)
+		training_edgelist_filename)
+	graph = graph.astype(int)
+	nx.write_weighted_edgelist(nx.from_scipy_sparse_matrix(graph, 
+		create_using=nx.DiGraph()), training_edgelist_filename)
+
+	removed_nodes_filename = os.path.join(removed_edges_dir,
+		"removed_nodes.txt")
+	print ("writing removed nodes to", removed_nodes_filename)
+	with open(removed_nodes_filename, "w") as f:
+		f.write("\n".join((str(u) for u in removed_nodes)))
 
 	write_edgelist_to_file(val_edges, val_edgelist_fn)
 	write_edgelist_to_file(val_non_edges, val_non_edgelist_fn)

@@ -59,19 +59,3 @@ class Checkpointer(Callback):
 			"{:05d}_model.h5".format(self.epoch))
 		self.model.save_weights(weights_filename)
 		print ("saving weights to", weights_filename)
-		
-		# embedding, variance = self.embedder.predict(self.features)
-
-		# assert np.allclose(minkowski_dot(embedding, embedding), -1)
-
-		# print ("embedding shape:", embedding.shape)
-		# print ("variance shape:", variance.shape)
-
-		# embedding = hyperboloid_to_poincare_ball(embedding)
-		# print ("embedding", np.linalg.norm(embedding.mean(0)))
-		# ranks = np.linalg.norm(embedding, axis=-1)
-		# assert (ranks < 1).all()
-		# print ("ranks", ranks.min(), ranks.mean(),
-		# 	ranks.max() )
-		# print ("variance", variance.min(),
-		# 	variance.mean(), variance.max())

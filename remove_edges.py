@@ -11,7 +11,8 @@ from headnet.utils import load_data
 from remove_utils import sample_non_edges, write_edgelist_to_file
 
 
-def split_edges(nodes, 
+def split_edges(
+	nodes, 
 	edges, 
 	seed,
 	val_split=0.05, 
@@ -31,20 +32,23 @@ def split_edges(nodes,
 	random.shuffle(edges)
 
 	# ensure every node appears in edgelist
-	if not isinstance(nodes, set):
-		nodes = set(nodes)
-	cover = []
+	# nodes = set(graph)
+
+	cover_edges = []
+
 	if cover:
+		node_cover = set()
 		for u, v in edges:
-			if u in nodes or v in nodes:
-				nodes -= {u, v}
-				cover.append((u, v))
-			if len(nodes) == 0:
+			if u not in node_cover or v not in node_cover:
+				node_cover = node_cover.union({u, v})
+				cover_edges.append((u, v))
+			if len(node_cover) == len(nodes):
 				break
 		
-		print ("determined cover")
-		edges = filter(lambda edge: edge not in cover, edges)
-		print ("filtered cover out of edges")
+		print ("determined cover", len(cover_edges))
+		edges = filter(lambda edge: 
+			edge not in cover_edges, edges)
+		print ("filtering cover out of edges")
 
 	val_edges = []
 	test_edges = []
@@ -57,7 +61,7 @@ def split_edges(nodes,
 		else:
 			train_edges.append(edge)
 
-	train_edges += cover
+	train_edges += cover_edges
 
 	print ("determined edge split")
 
@@ -103,16 +107,18 @@ def main():
 	args.directed = True
 
 	seed= args.seed
-	training_edgelist_dir = os.path.join(args.output, "seed={:03d}".format(seed), "training_edges")
-	removed_edges_dir = os.path.join(args.output, "seed={:03d}".format(seed), "removed_edges")
+	training_edgelist_dir = os.path.join(args.output, 
+		"seed={:03d}".format(seed), "training_edges")
+	removed_edges_dir = os.path.join(args.output, 
+		"seed={:03d}".format(seed), "removed_edges")
 
 	if not os.path.exists(training_edgelist_dir):
 		os.makedirs(training_edgelist_dir, exist_ok=True)
 	if not os.path.exists(removed_edges_dir):
 		os.makedirs(removed_edges_dir, exist_ok=True)
 
-	training_edgelist_fn = os.path.join(training_edgelist_dir, 
-		"graph.npz")
+	# training_edgelist_fn = os.path.join(training_edgelist_dir, 
+	# 	"graph.npz")
 	val_edgelist_fn = os.path.join(removed_edges_dir, 
 		"val_edges.tsv")
 	val_non_edgelist_fn = os.path.join(removed_edges_dir, 
@@ -129,10 +135,11 @@ def main():
 		graph = nx.adjacency_matrix(graph, 
 			nodelist=sorted(graph),
 			weight=None).astype(bool)
-	# else: 
+
 	nodes = set(range(graph.shape[0]))
 	edges = list(zip(*graph.nonzero()))
 	print ("enumerated edges")
+	print ("number of edges", len(edges))
 
 	(_, (val_edges, val_non_edges), 
 	(test_edges, test_non_edges)) = split_edges(
@@ -146,18 +153,34 @@ def main():
 	print ("number of test edges", len(test_edges), 
 		"number of test non edges", len(test_edges))
 
-	# graph.remove_edges_from(val_edges + test_edges) # remove val and test edges
-	# graph.add_edges_from(((u, u, {"weight": 0}) for u in graph.nodes())) # ensure that every node appears at least once by adding self loops
-	
 	# remove val and test edges
 	for edge in val_edges + test_edges:
 		graph[edge] = 0
 	graph.eliminate_zeros()
 
+	assert np.all(np.logical_or(graph.A.any(0).flatten(),
+		graph.A.any(1).flatten()))
+	for u, v in val_edges:
+		assert not graph[u, v]
+	for u, v in test_edges:
+		assert not graph[u, v]
+
 	print ("removed edges")
 
-	# nx.write_edgelist(graph, training_edgelist_fn, delimiter="\t", data=["weight"])
-	save_npz(training_edgelist_fn, graph)
+	training_sparse_filename = os.path.join(training_edgelist_dir,
+		"graph.npz")
+	print ("writing adjacency matrix to", 
+		training_sparse_filename)
+	save_npz(training_sparse_filename, graph)
+
+	training_edgelist_filename = os.path.join(training_edgelist_dir, 
+		"edgelist.tsv.gz")
+	print ("writing training edgelist to", 
+		training_edgelist_filename)
+	graph = graph.astype(int)
+	nx.write_weighted_edgelist(nx.from_scipy_sparse_matrix(graph, 
+		create_using=nx.DiGraph()), training_edgelist_filename)
+
 	write_edgelist_to_file(val_edges, val_edgelist_fn)
 	write_edgelist_to_file(val_non_edges, val_non_edgelist_fn)
 	write_edgelist_to_file(test_edges, test_edgelist_fn)
