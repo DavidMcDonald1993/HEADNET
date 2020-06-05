@@ -1,9 +1,9 @@
 #!/bin/bash
 
-#SBATCH --job-name=RNREALWORLD
-#SBATCH --output=RNREALWORLD_%A_%a.out
-#SBATCH --error=RNREALWORLD_%A_%a.err
-#SBATCH --array=0-479
+#SBATCH --job-name=CITATION
+#SBATCH --output=CITATION_%A_%a.out
+#SBATCH --error=CITATION_%A_%a.err
+#SBATCH --array=0-1919
 #SBATCH --time=10-00:00:00
 #SBATCH --ntasks=2
 #SBATCH --mem=5G
@@ -13,8 +13,8 @@ e=1000
 datasets=(cora_ml citeseer pubmed cora)
 dims=(5 10 25 50)
 seeds=({0..29})
-exps=(rn_experiment)
-feats=(feats)
+exps=(recon_experiment lp_experiment)
+feats=(no_feats feats)
 
 num_datasets=${#datasets[@]}
 num_dims=${#dims[@]}
@@ -70,7 +70,7 @@ then
         --embedding ${embedding_dir} --seed ${seed} \
         --dim ${dim} --workers 1 -e ${e} \
         --nneg 10)
-        if [ ${feat} == feat ]
+        if [ ${feat} == feats ]
         then
             args=${args}" --features ${features}"
         fi

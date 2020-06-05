@@ -1,20 +1,20 @@
 #!/bin/bash
 
-#SBATCH --job-name=REALWORLD
-#SBATCH --output=REALWORLD_%A_%a.out
-#SBATCH --error=REALWORLD_%A_%a.err
-#SBATCH --array=0-2399
+#SBATCH --job-name=WIKIVOTE
+#SBATCH --output=WIKIVOTE_%A_%a.out
+#SBATCH --error=WIKIVOTE_%A_%a.err
+#SBATCH --array=0-239
 #SBATCH --time=10-00:00:00
 #SBATCH --ntasks=2
 #SBATCH --mem=5G
 
 e=1000
 
-datasets=(cora_ml citeseer pubmed cora wiki_vote)
+datasets=(wiki_vote)
 dims=(5 10 25 50)
 seeds=({0..29})
 exps=(recon_experiment lp_experiment)
-feats=(no_feats feats)
+feats=(no_feats)
 
 num_datasets=${#datasets[@]}
 num_dims=${#dims[@]}
@@ -70,7 +70,7 @@ then
         --embedding ${embedding_dir} --seed ${seed} \
         --dim ${dim} --workers 1 -e ${e} \
         --nneg 10)
-        if [ ${feat} == feat ]
+        if [ ${feat} == feats ]
         then
             args=${args}" --features ${features}"
         fi
