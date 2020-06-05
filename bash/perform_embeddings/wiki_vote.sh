@@ -14,7 +14,7 @@ datasets=(wiki_vote)
 dims=(5 10 25 50)
 seeds=({0..29})
 exps=(recon_experiment lp_experiment)
-feats=(no_feats)
+feat=nofeats
 
 num_datasets=${#datasets[@]}
 num_dims=${#dims[@]}
@@ -22,17 +22,15 @@ num_seeds=${#seeds[@]}
 num_exps=${#exps[@]}
 num_feats=${#feats[@]}
 
-dataset_id=$((SLURM_ARRAY_TASK_ID / (num_feats * num_exps * num_seeds * num_dims) % num_datasets))
-dim_id=$((SLURM_ARRAY_TASK_ID / (num_feats * num_exps * num_seeds) % num_dims))
-seed_id=$((SLURM_ARRAY_TASK_ID / (num_feats * num_exps) % num_seeds))
-exp_id=$((SLURM_ARRAY_TASK_ID / num_feats % num_exps))
-feat_id=$((SLURM_ARRAY_TASK_ID % num_feats))
+dataset_id=$((SLURM_ARRAY_TASK_ID / (num_exps * num_seeds * num_dims) % num_datasets))
+dim_id=$((SLURM_ARRAY_TASK_ID / (num_exps * num_seeds) % num_dims))
+seed_id=$((SLURM_ARRAY_TASK_ID / num_exps % num_seeds))
+exp_id=$((SLURM_ARRAY_TASK_ID % num_exps))
 
 dataset=${datasets[$dataset_id]}
 dim=${dims[$dim_id]}
 seed=${seeds[$seed_id]}
 exp=${exps[$exp_id]}
-feat=${feats[$feat_id]}
 
 echo $dataset $dim $seed $exp $feat
 
@@ -49,7 +47,7 @@ fi
 echo graph is $graph
 features=${data_dir}/feats.npz
 
-embedding_dir=embeddings/${dataset}/${exp}/${feat}
+embedding_dir=embeddings/${dataset}/${feat}/${exp}
 embedding_dir=$(printf "${embedding_dir}/seed=%03d/dim=%03d" ${seed} ${dim})
 
 echo embedding directory is $embedding_dir
@@ -70,10 +68,6 @@ then
         --embedding ${embedding_dir} --seed ${seed} \
         --dim ${dim} --workers 1 -e ${e} \
         --nneg 10)
-        if [ ${feat} == feats ]
-        then
-            args=${args}" --features ${features}"
-        fi
 
         python main.py ${args}
 

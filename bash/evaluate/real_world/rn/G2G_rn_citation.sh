@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=G2GFEATLP
-#SBATCH --output=G2GFEATLP_%A_%a.out
-#SBATCH --error=G2GFEATLP_%A_%a.err
+#SBATCH --job-name=G2GCITRN
+#SBATCH --output=G2GCITRN_%A_%a.out
+#SBATCH --error=G2GCITRN_%A_%a.err
 #SBATCH --array=0-959
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
@@ -13,7 +13,8 @@ datasets=(cora_ml citeseer pubmed cora)
 dims=(5 10 25 50)
 seeds=({0..29})
 ks=(01 03)
-exp=lp_experiment
+exp=rn_experiment
+feat=feats
 
 num_scales=${#scales[@]}
 num_datasets=${#datasets[@]}
@@ -36,28 +37,30 @@ k=${ks[$k_id]}
 echo $scale $dataset $dim $seed $k
 
 data_dir=datasets/${dataset}
-# graph=${data_dir}/edgelist.tsv.gz
 graph=${data_dir}/graph.npz
-removed_edges_dir=$(printf edgelists/${dataset}/seed=%03d/removed_edges ${seed})
+
+removed_edges_dir=$(printf nodes/${dataset}/seed=%03d/removed_edges ${seed})
+
+embedding_dir=../graph2gauss/embeddings/${dataset}/${feat}/${exp}
+embedding_dir=$(printf "${embedding_dir}/scale=${scale}/k=${k}/seed=%03d/dim=%03d/" ${seed} ${dim})
 
 test_results=$(printf \
-    "test_results/${dataset}/${exp}/dim=%03d/g2g_k=${k}/" ${dim})
-embedding_dir=../graph2gauss/embeddings/${dataset}/feats/${exp}
-embedding_dir=$(printf "${embedding_dir}/scale=${scale}/k=${k}/seed=%03d/dim=%03d/" ${seed} ${dim})
-echo ${embedding_dir}
-echo ${test_results}
+    "test_results/${dataset}/${exp}/dim=%03d/g2g_k=${k}" ${dim})
 
-args=$(echo --graph ${graph} \
-    --removed_edges_dir ${removed_edges_dir} \
-    --dist_fn kle \
-    --embedding ${embedding_dir} --seed ${seed} \
-    --test-results-dir ${test_results})
-echo ${args}
+if [ ! -f ${test_results}/${seed}.pkl ]
+then 
+    args=$(echo --graph ${graph} \
+        --removed_edges_dir ${removed_edges_dir} \
+        --dist_fn kle \
+        --embedding ${embedding_dir} --seed ${seed} \
+        --test-results-dir ${test_results})
+    echo ${args}
 
-module purge
-module load bluebear
-# module load apps/python3/3.5.2
-module load future/0.16.0-foss-2018b-Python-3.6.6
+    module purge
+    module load bluebear
+    module load future/0.16.0-foss-2018b-Python-3.6.6
 
-
-python evaluate_lp.py ${args}
+    python evaluate_lp.py ${args}
+else 
+    echo  ${test_results}/${seed}.pkl 
+fi

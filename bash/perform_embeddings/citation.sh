@@ -14,7 +14,7 @@ datasets=(cora_ml citeseer pubmed cora)
 dims=(5 10 25 50)
 seeds=({0..29})
 exps=(recon_experiment lp_experiment)
-feats=(no_feats feats)
+feats=(nofeats feats)
 
 num_datasets=${#datasets[@]}
 num_dims=${#dims[@]}
@@ -49,7 +49,7 @@ fi
 echo graph is $graph
 features=${data_dir}/feats.npz
 
-embedding_dir=embeddings/${dataset}/${exp}/${feat}
+embedding_dir=embeddings/${dataset}/${feat}/${exp}
 embedding_dir=$(printf "${embedding_dir}/seed=%03d/dim=%03d" ${seed} ${dim})
 
 echo embedding directory is $embedding_dir
@@ -74,6 +74,8 @@ then
         then
             args=${args}" --features ${features}"
         fi
+
+        echo ${args}
 
         python main.py ${args}
 

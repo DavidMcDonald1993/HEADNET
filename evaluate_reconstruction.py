@@ -3,11 +3,14 @@ import os
 import random
 import numpy as np
 import networkx as nx
+import pandas as pd
 
 import argparse
 
+import pickle as pkl
+
 from headnet.utils import load_data
-from evaluation_utils import check_complete, load_embedding, compute_scores, evaluate_rank_AUROC_AP, evaluate_mean_average_precision, touch, threadsafe_save_test_results
+from evaluation_utils import load_embedding, compute_scores, evaluate_rank_AUROC_AP, evaluate_mean_average_precision
 from remove_utils import sample_non_edges
 
 def parse_args():
@@ -44,15 +47,16 @@ def main():
 	test_results_dir = args.test_results_dir
 	if not os.path.exists(test_results_dir):
 		os.makedirs(test_results_dir, exist_ok=True)
+	
 	test_results_filename = os.path.join(test_results_dir, 
-		"test_results.csv")
+		"{}.pkl".format(args.seed))
 
-	if check_complete(test_results_filename, args.seed):
-		return
+	# if check_complete(test_results_filename, args.seed):
+	# 	return
 
-	test_results_lock_filename = os.path.join(test_results_dir, 
-		"test_results.lock")
-	touch(test_results_lock_filename)
+	# test_results_lock_filename = os.path.join(test_results_dir, 
+	# 	"test_results.lock")
+	# touch(test_results_lock_filename)
 
 	args.directed = True
 
@@ -116,8 +120,12 @@ def main():
 	print ("saving test results to {}".format(
 		test_results_filename))
 
-	threadsafe_save_test_results(test_results_lock_filename, 
-		test_results_filename, args.seed, data=test_results )
+	test_results = pd.Series(test_results)
+	with open(test_results_filename, "wb") as f:
+		pkl.dump(test_results, f, pkl.HIGHEST_PROTOCOL)
+
+	# threadsafe_save_test_results(test_results_lock_filename, 
+	# 	test_results_filename, args.seed, data=test_results )
 
 	print ("done")
 

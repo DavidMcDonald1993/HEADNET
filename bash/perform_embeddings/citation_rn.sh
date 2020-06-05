@@ -1,8 +1,8 @@
 #!/bin/bash
 
-#SBATCH --job-name=RNREALWORLD
-#SBATCH --output=RNREALWORLD_%A_%a.out
-#SBATCH --error=RNREALWORLD_%A_%a.err
+#SBATCH --job-name=RNCITATION
+#SBATCH --output=RNCITATION_%A_%a.out
+#SBATCH --error=RNCITATION_%A_%a.err
 #SBATCH --array=0-479
 #SBATCH --time=10-00:00:00
 #SBATCH --ntasks=2
@@ -14,25 +14,22 @@ datasets=(cora_ml citeseer pubmed cora)
 dims=(5 10 25 50)
 seeds=({0..29})
 exps=(rn_experiment)
-feats=(feats)
+feat=feats
 
 num_datasets=${#datasets[@]}
 num_dims=${#dims[@]}
 num_seeds=${#seeds[@]}
 num_exps=${#exps[@]}
-num_feats=${#feats[@]}
 
-dataset_id=$((SLURM_ARRAY_TASK_ID / (num_feats * num_exps * num_seeds * num_dims) % num_datasets))
-dim_id=$((SLURM_ARRAY_TASK_ID / (num_feats * num_exps * num_seeds) % num_dims))
-seed_id=$((SLURM_ARRAY_TASK_ID / (num_feats * num_exps) % num_seeds))
-exp_id=$((SLURM_ARRAY_TASK_ID / num_feats % num_exps))
-feat_id=$((SLURM_ARRAY_TASK_ID % num_feats))
+dataset_id=$((SLURM_ARRAY_TASK_ID / (num_exps * num_seeds * num_dims) % num_datasets))
+dim_id=$((SLURM_ARRAY_TASK_ID / (num_exps * num_seeds) % num_dims))
+seed_id=$((SLURM_ARRAY_TASK_ID / (num_exps) % num_seeds))
+exp_id=$((SLURM_ARRAY_TASK_ID % num_exps))
 
 dataset=${datasets[$dataset_id]}
 dim=${dims[$dim_id]}
 seed=${seeds[$seed_id]}
 exp=${exps[$exp_id]}
-feat=${feats[$feat_id]}
 
 echo $dataset $dim $seed $exp $feat
 
@@ -49,7 +46,7 @@ fi
 echo graph is $graph
 features=${data_dir}/feats.npz
 
-embedding_dir=embeddings/${dataset}/${exp}/${feat}
+embedding_dir=embeddings/${feat}/${dataset}/${exp}
 embedding_dir=$(printf "${embedding_dir}/seed=%03d/dim=%03d" ${seed} ${dim})
 
 echo embedding directory is $embedding_dir
