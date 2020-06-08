@@ -3,7 +3,7 @@
 # experiments
 for dataset in {00..29}
 do
-	for dim in 2 5 10 25 50
+	for dim in 5 10 25 50
 	do	
 		for seed in 0
 		do
