@@ -132,7 +132,7 @@ def build_headnet(
 	if features is not None:
 
 		trainable_input = Input(
-			(1 + num_negative_samples, 2, num_features, ),
+			(1 + num_negative_samples, 2, features.shape[1], ),
 			name="trainable_input_attributed")
 	else:
 
