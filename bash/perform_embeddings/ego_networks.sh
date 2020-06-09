@@ -78,6 +78,8 @@ then
 
         echo $args
 
+        ulimit -c 0
+
         python main.py ${args}
 
     fi

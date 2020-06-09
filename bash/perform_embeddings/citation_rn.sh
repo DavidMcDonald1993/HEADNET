@@ -23,7 +23,7 @@ num_exps=${#exps[@]}
 
 dataset_id=$((SLURM_ARRAY_TASK_ID / (num_exps * num_seeds * num_dims) % num_datasets))
 dim_id=$((SLURM_ARRAY_TASK_ID / (num_exps * num_seeds) % num_dims))
-seed_id=$((SLURM_ARRAY_TASK_ID / (num_exps) % num_seeds))
+seed_id=$((SLURM_ARRAY_TASK_ID / num_exps % num_seeds))
 exp_id=$((SLURM_ARRAY_TASK_ID % num_exps))
 
 dataset=${datasets[$dataset_id]}
@@ -71,6 +71,10 @@ then
         then
             args=${args}" --features ${features}"
         fi
+
+        echo $args
+
+        ulimit -c 0
 
         python main.py ${args}
 

@@ -61,6 +61,8 @@ then
         --dim ${dim} --context-size 1 -e ${e} \
         --nneg 10)
 
+        ulimit -c 0
+
         python main.py ${args}
     fi
 
