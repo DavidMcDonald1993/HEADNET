@@ -29,13 +29,11 @@ def split_edges(
 	num_test_edges = int(np.ceil(len(edges) * test_split))
 
 	random.seed(seed)
+	print ("shuffling edges using seed", seed)
 	random.shuffle(edges)
 
 	# ensure every node appears in edgelist
-	# nodes = set(graph)
-
 	cover_edges = []
-
 	if cover:
 		node_cover = set()
 		for u, v in edges:
@@ -179,7 +177,7 @@ def main():
 		training_edgelist_filename)
 	graph = graph.astype(int)
 	nx.write_weighted_edgelist(nx.from_scipy_sparse_matrix(graph, 
-		create_using=nx.DiGraph()), training_edgelist_filename)
+		create_using=nx.DiGraph()), training_edgelist_filename, delimiter="\t")
 
 	write_edgelist_to_file(val_edges, val_edgelist_fn)
 	write_edgelist_to_file(val_non_edges, val_non_edgelist_fn)

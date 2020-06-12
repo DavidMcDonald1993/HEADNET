@@ -164,7 +164,7 @@ def main():
 		training_edgelist_filename)
 	graph = graph.astype(int)
 	nx.write_weighted_edgelist(nx.from_scipy_sparse_matrix(graph, 
-		create_using=nx.DiGraph()), training_edgelist_filename)
+		create_using=nx.DiGraph()), training_edgelist_filename, delimiter="\t")
 
 	removed_nodes_filename = os.path.join(removed_edges_dir,
 		"removed_nodes.txt")
