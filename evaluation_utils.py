@@ -15,7 +15,7 @@ import random
 import types
 
 def euclidean_distance(u, v):
-	return np.linag.norm(u - v, axis=-1)
+	return np.linalg.norm(u - v, axis=-1)
 
 def minkowski_dot(x, y):
 	assert len(x.shape) == len(y.shape) 
@@ -211,38 +211,30 @@ def compute_scores(U, V, dist_fn):
 	assert isinstance(U, types.GeneratorType)
 	assert isinstance(V, types.GeneratorType)
 
+
 	if dist_fn == "hyperboloid":
-		raise NotImplementedError
-		scores = -hyperbolic_distance_hyperboloid(u, v)
+		scores = -np.concatenate([
+			hyperbolic_distance_hyperboloid(u, v)
+			for u, v in zip(U, V)])
 	elif dist_fn == "poincare":
-		raise NotImplementedError
-		scores = -hyperbolic_distance_poincare(u, v)
+		scores = -np.concatenate([
+			hyperbolic_distance_poincare(u, v)
+			for u, v in zip(U, V)])
 	elif dist_fn == "euclidean":
-		raise NotImplementedError
-		scores = -euclidean_distance(u, v)
+		scores = -np.concatenate([
+			euclidean_distance(u, v)
+			for u, v in zip(U, V)])
 	elif dist_fn == "klh":
-		# assert isinstance(u, tuple)
-		# assert isinstance(v, tuple)
-		# scores = -kullback_leibler_divergence_hyperboloid(
-		# 	u[0], u[1], v[0], v[1])
-		# if isinstance(U, types.GeneratorType) and \
-		# 	isinstance(V, types.GeneratorType):
 		scores = -np.concatenate([
 			kullback_leibler_divergence_hyperboloid(u[0], u[1], v[0], v[1])
-			for u, v in zip(U, V)
-		])
+			for u, v in zip(U, V)])
 	elif dist_fn == "kle":
-		# assert isinstance(u, tuple)
-		# assert isinstance(v, tuple)
-		# scores = -kullback_leibler_divergence_euclidean(
-		# 	u[0], u[1], v[0], v[1])
 		scores = -np.concatenate([
 			kullback_leibler_divergence_euclidean(u[0], u[1], v[0], v[1])
-			for u, v in zip(U, V)
-		])
+			for u, v in zip(U, V)])
 	elif dist_fn == "st":
-		raise NotImplementedError
-		scores = -euclidean_distance(u, v)
+		scores = -np.concatenate([euclidean_distance(u, v)
+			for u, v in zip(U, V)])
 
 	return scores
 
@@ -299,20 +291,28 @@ def evaluate_mean_average_precision(
 		num_chunks = int(np.ceil(len(neighbours) / chunk_size))
 
 		if isinstance(embedding, tuple):
-			assert dist_fn in ("klh", "kle")
-			means, variances = embedding
-			scores = compute_scores(
-				((means[u:u+1], variances[u:u+1]) 
-					for _ in range(num_chunks)),
-				((means[neighbours[j*chunk_size:(j+1)*chunk_size]], 
-					variances[neighbours[j*chunk_size:(j+1)*chunk_size]]) 
-					for j in range(num_chunks)),
-				dist_fn)
+			if dist_fn in ("klh", "kle"):
+				means, variances = embedding
+				scores = compute_scores(
+					((means[u:u+1], variances[u:u+1]) 
+						for _ in range(num_chunks)),
+					((means[neighbours[j*chunk_size:(j+1)*chunk_size]], 
+						variances[neighbours[j*chunk_size:(j+1)*chunk_size]]) 
+						for j in range(num_chunks)),
+					dist_fn)
+			else:
+				assert dist_fn == "st"
+				source, target = embedding
+				scores = compute_scores(
+					(source[u:u+1] for _ in range(num_chunks)),
+					(target[neighbours[j*chunk_size:(j+1)*chunk_size]]
+						for j in range(num_chunks)),
+					dist_fn)
 		else:
-			raise NotImplementedError
 			scores = compute_scores(
-				embedding[u:u+1], 
-				embedding[neighbours],
+				(embedding[u:u+1] for _ in range(num_chunks)), 
+				(embedding[neighbours[j*chunk_size:(j+1)*chunk_size]]
+					for j in range(num_chunks)),
 				dist_fn)
 		assert len(scores.shape) == 1
 
@@ -391,10 +391,6 @@ def get_scores(embedding,
 	if dist_fn in ("kle", "klh"):
 		means, variances = embedding
 
-		# embedding_u = (means[edges[:,0]], 
-		# 	variances[edges[:,0]])
-		# embedding_v = (means[edges[:,1]], 
-		# 	variances[edges[:,1]])
 		embedding_u = (
 			(means[edges[i*chunk_size:(i+1)*chunk_size, 0]], 
 				variances[edges[i*chunk_size:(i+1)*chunk_size, 0]])
@@ -406,15 +402,18 @@ def get_scores(embedding,
 			for i in range(num_chunks)
 		)
 
-	# elif dist_fn == "st":
-	# 	source, target = embedding
-	# 	embedding_u = source[edges[:,0]]
-	# 	embedding_v = target[edges[:,1]]
+	elif dist_fn == "st":
+		source, target = embedding
+		embedding_u = (source[edges[i*chunk_size:(i+1)*chunk_size,0]]
+			for i in range(num_chunks))
+		embedding_v = (target[edges[i*chunk_size:(i+1)*chunk_size,1]]
+			for i in range(num_chunks))
 
 	else:
-		raise NotImplementedError
-		# embedding_u = embedding[edges[:,0]]
-		# embedding_v = embedding[edges[:,1]]
+		embedding_u = (embedding[edges[i*chunk_size:(i+1)*chunk_size,0]]
+			for i in range(num_chunks))
+		embedding_v = (embedding[edges[i*chunk_size:(i+1)*chunk_size,1]]
+			for i in range(num_chunks))
 
 
 	return compute_scores(embedding_u, embedding_v, dist_fn)
