@@ -10,7 +10,7 @@
 
 scales=(False)
 datasets=({0..29})
-dims=(2 5 10 25 50)
+dims=(5 10 25 50)
 seeds=(0)
 ks=(01 03)
 exp=lp_experiment
