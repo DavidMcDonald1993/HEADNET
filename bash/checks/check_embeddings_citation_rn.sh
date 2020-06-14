@@ -6,9 +6,9 @@ do
 	do	
 		for seed in {0..29}
 		do
-			for exp in recon_experiment lp_experiment
+			for exp in rn_experiment
 			do
-				for feat in nofeats feats
+				for feat in feats
 				do
 					embedding_dir=$(printf \
 					"embeddings/${dataset}/${feat}/${exp}/seed=%03d/dim=%03d" ${seed} ${dim})
