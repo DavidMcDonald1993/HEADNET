@@ -46,7 +46,7 @@ fi
 echo graph is $graph
 features=${data_dir}/feats.npz
 
-embedding_dir=embeddings/${feat}/${dataset}/${exp}
+embedding_dir=embeddings/${dataset}/${feat}/${exp}
 embedding_dir=$(printf "${embedding_dir}/seed=%03d/dim=%03d" ${seed} ${dim})
 
 echo embedding directory is $embedding_dir
