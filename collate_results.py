@@ -2,6 +2,16 @@ import pandas as pd
 import argparse
 import os
 
+from scipy.stats import ttest_ind
+import itertools
+
+import pickle as pkl
+
+def make_dir(d):
+	if not os.path.exists(d):
+		print ("making directory", d)
+		os.makedirs(d, exist_ok=True)
+
 def parse_args():
 	'''
 	parse args from the command line
@@ -14,7 +24,7 @@ def parse_args():
 
 	parser.add_argument("--exp", 
 		dest="exp", default="recon",
-		choices=["recon", "lp", "rn"],
+		choices=["recon", "lp", ],
 		help="experiment to evaluate")
 
 	parser.add_argument("--output", 
@@ -30,49 +40,152 @@ def main():
 
 	num_seeds = 30
 
-	datasets = ["cora_ml", 
-		"citeseer",  "pubmed", "cora"]
+	attributed_datasets = ["cora_ml", "citeseer",  "pubmed", "cora"]
+	unattributed_datasets = ["synthetic_scale_free", "wiki_vote"]
 
 	exp = "{}_experiment".format(args.exp)
 	dims = ["dim={:03}".format(dim) 
 		for dim in (5, 10, 25, 50)]
-	algorithms =["g2g_k={:02d}".format(k) for k in (1, 3)] + \
+
+	unattributed_algs = ["ln", "harmonic",] + ["line"] + \
+		["g2g_k={:02d}_nofeats".format(k) for k in (1, 3)] + \
+			["HEDNet"]
+	attributed_algs = ["g2g_k={:02d}_feats".format(k) for k in (1, 3)] + \
 			["HEADNet"]
+	
+	if args.exp == "rn":
+		datasets = attributed_datasets
+	else:
+		datasets = unattributed_datasets + attributed_datasets
 
 	output_dir = os.path.join(args.output, exp) 
-	if not os.path.exists(output_dir):
-		print ("making directory", output_dir)
-		os.makedirs(output_dir, exist_ok=True)
+	make_dir(output_dir)
 
-	for dataset in datasets:
+	critical_value = 0.05
 
-		for dim in dims:
-	
-			collated_df = pd.DataFrame()
+	for dim in dims:
+
+		output_dir_ = os.path.join(output_dir, 
+			dim)
+		make_dir(output_dir_)
+
+		for dataset in datasets:
+
+			mean_df = pd.DataFrame()
+			std_df = pd.DataFrame()
+			sem_df = pd.DataFrame()
+
+			dfs = dict() # store dfs for ttests
+
+			if dataset in unattributed_datasets:
+				algorithms = unattributed_algs
+			elif args.exp == "rn":
+				algorithms = attributed_algs
+			else:
+				algorithms = unattributed_algs + attributed_algs
 
 			for algorithm in algorithms:
 
-				results_file = os.path.join(
-					args.test_results_path, 
-					dataset,
-					exp,
-					dim,
-					algorithm,
-					"test_results.csv")
-				print ("reading", results_file)
+				# results_file = os.path.join(
+				# 	args.test_results_path, 
+				# 	dataset,
+				# 	exp,
+				# 	dim,
+				# 	algorithm,
+				# 	"test_results.csv")
+				# print ("reading", results_file)
 
-				results_df = pd.read_csv(results_file, index_col=0, sep=",")
-				assert results_df.shape[0] == num_seeds, (dataset, 
-					dim, algorithm)
+				# results_df = pd.read_csv(results_file, 
+				# 	index_col=0, sep=",")
 
-				collated_df = collated_df.append(pd.Series(
+
+				results_df = []
+				for seed in range(num_seeds):
+					results_filename = os.path.join(
+						args.test_results_path, 
+							dataset,
+							exp,
+							dim,
+							algorithm,
+							"{}.pkl".format(seed))
+					print ("reading results from", results_filename)
+					assert os.path.exists(results_filename)
+					with open(results_filename, "rb") as f:
+						results = pkl.load(f)
+					results_df.append(results)
+
+				results_df = pd.DataFrame(results_df)
+
+				assert results_df.shape[0] == num_seeds, \
+					(dataset, dim, algorithm)
+
+				dfs[algorithm] = results_df
+
+				mean_df = mean_df.append(pd.Series(
 					results_df.mean(0), name=algorithm
 				))
 
-			output_filename = os.path.join(output_dir,
-				"{}_{}.csv".format(dataset, dim))
-			print ("writing to", output_filename)
-			collated_df.to_csv(output_filename)
+				std_df = std_df.append(pd.Series(
+					results_df.std(0), name=algorithm
+				))
+
+				sem_df = sem_df.append(pd.Series(
+					results_df.sem(0), name=algorithm
+				))
+
+			mean_filename = os.path.join(output_dir_,
+				"{}_{}_means.csv".format(dataset, dim))
+			print ("writing to", mean_filename)
+			mean_df.to_csv(mean_filename)
+
+			std_filename = os.path.join(output_dir_,
+				"{}_{}_stds.csv".format(dataset, dim))
+			print ("writing to", std_filename)
+			std_df.to_csv(std_filename)
+
+			sem_filename = os.path.join(output_dir_,
+				"{}_{}_sems.csv".format(dataset, dim))
+			print ("writing to", sem_filename)
+			sem_df.to_csv(sem_filename)
+
+			# perform t tests
+			ttest_dir = os.path.join(output_dir_, 
+				"t-tests")
+			make_dir(ttest_dir)
+
+			for a1, a2 in itertools.product(
+				hednet_algs, 
+				baseline_algs):
+
+				# obtain the means
+				m1 = mean_df.loc[a1]
+				m2 = mean_df.loc[a2]
+
+				index = m1.index
+
+				t, p = ttest_ind(dfs[a1], dfs[a2],
+					nan_policy="omit", equal_var=False)
+				
+				# rank should be minimum
+				t[index.str.contains("rank")] = -t[index.str.contains("rank")]
+
+				p /= 2 # one tailed ttest
+				p[t<0] = 1-p[t<0]
+
+				t = pd.Series(t, index=index, name="t-statistic")
+				p = pd.Series(p, index=index, name="p-value")
+				reject_null = pd.Series(p < critical_value, 
+					index=index,
+					name="rejected_null?")
+
+				ttest_df = pd.DataFrame([m1, m2, t, p, reject_null], )
+
+				ttest_df_filename = os.path.join(ttest_dir,
+					"{}_{}_ttest-{}-{}.csv".format(dataset, dim,
+						a1, a2))
+				print ("writing ttests for", a1, "and", a2,
+					"to", ttest_df_filename)
+				ttest_df.to_csv(ttest_df_filename)
 
 
 if __name__ == "__main__":
