@@ -7,6 +7,8 @@ import itertools
 
 import pickle as pkl
 
+import re
+
 def make_dir(d):
 	if not os.path.exists(d):
 		print ("making directory", d)
@@ -154,8 +156,8 @@ def main():
 			make_dir(ttest_dir)
 
 			for a1, a2 in itertools.product(
-				hednet_algs, 
-				baseline_algs):
+				filter(lambda s: re.match("HE[A]*DNet", s), algorithms), 
+				filter(lambda s: not re.match("HE[A]*DNet", s), algorithms)):
 
 				# obtain the means
 				m1 = mean_df.loc[a1]
