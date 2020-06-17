@@ -24,7 +24,7 @@ def parse_args():
 
 	parser.add_argument("--exp", 
 		dest="exp", default="recon",
-		choices=["recon", "lp", ],
+		choices=["recon", "lp", "rn"],
 		help="experiment to evaluate")
 
 	parser.add_argument("--output", 

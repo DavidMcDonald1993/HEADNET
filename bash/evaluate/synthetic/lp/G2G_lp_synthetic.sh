@@ -46,7 +46,7 @@ embedding_dir=$(printf \
 removed_edges_dir=$(printf edgelists/synthetic_scale_free/%02d/seed=%03d/removed_edges ${dataset} ${seed})
 
 test_results=$(printf \
-    "test_results/synthetic_scale_free/${exp}/dim=%03d/g2g_k=${k}" ${dim})
+    "test_results/synthetic_scale_free/${exp}/dim=%03d/g2g_k=${k}_${feat}" ${dim})
 
 if [ ! -f ${test_results}/${dataset}.pkl ]
 then

@@ -43,7 +43,7 @@ embedding_dir=$(printf \
     "${embedding_dir}/seed=%03d/dim=%03d/" ${seed} ${dim})
 
 test_results=$(printf \
-    "test_results/synthetic_scale_free/${exp}/dim=%03d/g2g_k=${k}" ${dim})
+    "test_results/synthetic_scale_free/${exp}/dim=%03d/g2g_k=${k}_${feat}" ${dim})
 
 if [ ! -f ${test_results}/${dataset}.pkl ]
 then
