@@ -14,6 +14,7 @@ dims=(5 10 25 50)
 seeds=(0)
 ks=(01 03)
 exp=recon_experiment
+feat=nofeats
 
 num_scales=${#scales[@]}
 num_datasets=${#datasets[@]}
