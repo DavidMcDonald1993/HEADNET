@@ -124,9 +124,6 @@ def main():
 	with open(test_results_filename, "wb") as f:
 		pkl.dump(test_results, f, pkl.HIGHEST_PROTOCOL)
 
-	# threadsafe_save_test_results(test_results_lock_filename, 
-	# 	test_results_filename, args.seed, data=test_results )
-
 	print ("done")
 
 
