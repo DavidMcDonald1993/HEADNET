@@ -51,7 +51,7 @@ def main():
 
 	unattributed_algs = ["ln", "harmonic",] + ["line"] + \
 		["g2g_k={:02d}_nofeats".format(k) for k in (1, 3)] + \
-			["HEDNet"]
+			["NK"] + ["HEDNet_identity", "HEDNet"]
 	attributed_algs = ["g2g_k={:02d}_feats".format(k) for k in (1, 3)] + \
 			["HEADNet"]
 	
@@ -87,19 +87,6 @@ def main():
 				algorithms = unattributed_algs + attributed_algs
 
 			for algorithm in algorithms:
-
-				# results_file = os.path.join(
-				# 	args.test_results_path, 
-				# 	dataset,
-				# 	exp,
-				# 	dim,
-				# 	algorithm,
-				# 	"test_results.csv")
-				# print ("reading", results_file)
-
-				# results_df = pd.read_csv(results_file, 
-				# 	index_col=0, sep=",")
-
 
 				results_df = []
 				for seed in range(num_seeds):
@@ -156,7 +143,7 @@ def main():
 			make_dir(ttest_dir)
 
 			for a1, a2 in itertools.product(
-				filter(lambda s: re.match("HE[A]*DNet", s), algorithms), 
+				filter(lambda s: re.match("^HE[A]*DNet$", s), algorithms), 
 				filter(lambda s: not re.match("HE[A]*DNet", s), algorithms)):
 
 				# obtain the means
