@@ -49,7 +49,7 @@ fi
 echo graph is $graph
 features=${data_dir}/feats.npz
 
-embedding_dir=embeddings/${dataset}/${feat}/${exp}
+embedding_dir=embeddings_identity_variance/${dataset}/${feat}/${exp}
 embedding_dir=$(printf "${embedding_dir}/seed=%03d/dim=%03d" ${seed} ${dim})
 
 echo embedding directory is $embedding_dir
@@ -69,7 +69,7 @@ then
         args=$(echo --graph ${graph} \
         --embedding ${embedding_dir} --seed ${seed} \
         --dim ${dim} --workers 1 -e ${e} \
-        --nneg 10)
+        --nneg 10 --identity_variance)
         if [ ${feat} == feats ]
         then
             args=${args}" --features ${features}"

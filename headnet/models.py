@@ -74,7 +74,8 @@ def build_headnet(
 	features, 
 	embedding_dim, 
 	num_negative_samples, 
-	num_hidden=128,):
+	num_hidden=128,
+	identity_variance=False):
 
 	if features is not None: # HEADNet with attributes
 
@@ -122,8 +123,11 @@ def build_headnet(
 		kernel_regularizer=regularizers.l2(reg),
 		bias_regularizer=regularizers.l2(reg),
 		name="dense_to_sigma",
-		# trainable=False
+		trainable=~identity_variance,
 	)(input_transform)
+	if  identity_variance:
+		sigma_layer = Lambda(K.stop_gradient,
+			name="variance_stop_gradient")(sigma_layer)
 
 	embedder_model = Model(input_layer, 
 		[to_hyperboloid, sigma_layer],

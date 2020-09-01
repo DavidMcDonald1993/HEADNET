@@ -80,8 +80,11 @@ def parse_args():
 	parser.add_argument("--embedding", dest="embedding_path", default=None, 
 		help="path to save embedings.")
 
-	parser.add_argument('--visualise', action="store_true", 
-		help='flag to visualise embedding (embedding_dim must be 2)')
+	parser.add_argument("--visualise", action="store_true", 
+		help="flag to visualise embedding (embedding_dim must be 2)")
+
+	parser.add_argument("--identity_variance", action="store_true",
+		help="flag to fix the variance matrix to the identity matrix.")
 
 	args = parser.parse_args()
 	return args
@@ -133,7 +136,9 @@ def main():
 		N,
 		features, 
 		args.embedding_dim, 
-		args.num_negative_samples, )
+		args.num_negative_samples, 
+		identity_variance=args.identity_variance,
+		)
 	model, initial_epoch = load_weights(
 		model, 
 		args.embedding_path)

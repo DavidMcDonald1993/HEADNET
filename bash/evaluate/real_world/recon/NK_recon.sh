@@ -26,6 +26,8 @@ dataset=${datasets[$dataset_id]}
 dim=${dims[$dim_id]}
 seed=${seeds[$seed_id]}
 
+dim=25
+
 echo $dataset $dim $seed
 
 data_dir=datasets/${dataset}
