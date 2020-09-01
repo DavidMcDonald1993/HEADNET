@@ -31,14 +31,14 @@ echo $dataset $dim $seed
 data_dir=$(printf datasets/synthetic_scale_free/%02d ${dataset})
 graph=${data_dir}/graph.npz
 
-embedding_dir=$(printf embeddings/synthetic_scale_free/%02d/${feat}/${exp} ${dataset})
+embedding_dir=$(printf embeddings_identity_variance/synthetic_scale_free/%02d/${feat}/${exp} ${dataset})
 embedding_dir=$(printf \
     "${embedding_dir}/seed=%03d/dim=%03d" ${seed} ${dim})
 
 removed_edges_dir=$(printf edgelists/synthetic_scale_free/%02d/seed=%03d/removed_edges ${dataset} ${seed})
 
 test_results=$(printf \
-    "test_results/synthetic_scale_free/${exp}/dim=%03d/HEDNet" ${dim})
+    "test_results/synthetic_scale_free/${exp}/dim=%03d/HEDNet_identity" ${dim})
 
 if [ ! -f ${test_results}/${dataset}.pkl ]
 then
