@@ -123,7 +123,7 @@ def build_headnet(
 		kernel_regularizer=regularizers.l2(reg),
 		bias_regularizer=regularizers.l2(reg),
 		name="dense_to_sigma",
-		trainable=~identity_variance,
+		trainable=not identity_variance,
 	)(input_transform)
 	if  identity_variance:
 		sigma_layer = Lambda(K.stop_gradient,
