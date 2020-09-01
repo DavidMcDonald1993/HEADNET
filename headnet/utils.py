@@ -2,30 +2,14 @@ from __future__ import print_function
 
 import re
 import os
-import fcntl
-import functools
 import numpy as np
 import networkx as nx
-
-import random
-
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
 
 import pandas as pd
 
 import pickle as pkl
 
-from multiprocessing.pool import Pool 
-
-import matplotlib.pyplot as plt
-
-from collections import Counter
-
-from scipy.sparse import identity, csr_matrix, load_npz
-
-import glob
-
+from scipy.sparse import csr_matrix, load_npz
 
 def load_data(args):
 

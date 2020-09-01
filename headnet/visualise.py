@@ -9,9 +9,6 @@ import networkx as nx
 
 from scipy.sparse import csr_matrix
 
-'''
-Code obtained from github
-'''
 
 colors = np.array(["b", "g", "r", "c", "m", "y", "k", "w"])
 

@@ -1,20 +1,20 @@
 from __future__ import print_function
 
-import random
+# import random
 import numpy as np
-import scipy as sp
-import networkx as nx
+# import scipy as sp
+# import networkx as nx
 
 from keras.utils import Sequence
-from keras import backend as K
+# from keras import backend as K
 
-import itertools
+# import itertools
 
-from sklearn.preprocessing import StandardScaler
+# from sklearn.preprocessing import StandardScaler
 
-from collections import Counter
+# from collections import Counter
 
-import threading
+# import threading
 
 class TrainingDataGenerator(Sequence):
 

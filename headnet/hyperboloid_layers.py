@@ -1,12 +1,6 @@
-import numpy as np
+# import numpy as np
 
 import keras.backend as K
-from keras.layers import Input, Layer, Concatenate
-from keras.models import Model
-from keras.initializers import Constant, RandomNormal
-from keras.regularizers import l2
-from keras import regularizers, activations
-
 
 import tensorflow as tf
 from tensorflow.python.framework import function

@@ -2,17 +2,10 @@ from __future__ import print_function
 
 import re
 import os
-import glob
-import numpy as np
-import pandas as pd
 
 from keras.callbacks import Callback
 
 from headnet.utils import hyperboloid_to_poincare_ball
-
-def minkowski_dot(x, y):
-	assert len(x.shape) == len(y.shape)
-	return np.sum(x[...,:-1] * y[...,:-1], axis=-1, keepdims=True) - x[...,-1:] * y[...,-1:]
 
 
 class Checkpointer(Callback):

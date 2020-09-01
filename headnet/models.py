@@ -4,7 +4,7 @@ from keras.layers import Input, Dense, Lambda, Embedding
 from keras.models import Model
 from keras.initializers  import RandomUniform
 from keras import regularizers
-from tensorflow.train import AdamOptimizer, GradientDescentOptimizer, RMSPropOptimizer
+from tensorflow.train import AdamOptimizer
 
 from headnet.losses import asym_hyperbolic_loss
 from headnet.hyperboloid_layers import logarithmic_map, parallel_transport, exp_map_0
