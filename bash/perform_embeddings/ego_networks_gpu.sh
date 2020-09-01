@@ -5,7 +5,10 @@
 #SBATCH --error=EGO_%A_%a.err
 #SBATCH --array=0-1439
 #SBATCH --time=10-00:00:00
-#SBATCH --ntasks=2
+#SBATCH --qos=bbgpu
+#SBATCH --account hesz01
+#SBATCH --gres gpu:p100:1
+#SBATCH --ntasks=1
 #SBATCH --mem=10G
 
 e=1000
@@ -64,7 +67,7 @@ then
     then 
         echo ${embedding_dir}/final_embedding.csv is missing -- performing embedding 
 
-        module load TensorFlow/1.10.1-foss-2018b-Python-3.6.6
+        module load TensorFlow/1.10.1-fosscuda-2018b-Python-3.6.6
         pip install --user keras==2.2.4
 
         args=$(echo --graph ${graph} \

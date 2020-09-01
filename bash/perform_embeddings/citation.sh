@@ -34,6 +34,10 @@ seed=${seeds[$seed_id]}
 exp=${exps[$exp_id]}
 feat=${feats[$feat_id]}
 
+dataset=pubmed 
+dim=50
+feat=feats
+
 echo $dataset $dim $seed $exp $feat
 
 data_dir=datasets/${dataset}

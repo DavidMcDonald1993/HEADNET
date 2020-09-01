@@ -10,6 +10,9 @@ def main():
 
     for dataset in datasets:
 
+        if "synthetic" in dataset:
+            continue
+
         edgelist = os.path.join("datasets", 
             dataset, "edgelist.tsv.gz")
 
@@ -17,8 +20,10 @@ def main():
         graph = nx.read_weighted_edgelist(edgelist,
             create_using=nx.DiGraph())
         
-        filename = os.path.join("datasets", 
-            dataset, "degree_dist.png")
+        filename = os.path.join("",
+            # "datasets", 
+            # dataset, 
+            "{}_degree_dist.png".format(dataset))
         plot_degree_dist(graph, dataset.capitalize(), filename)
 
 
