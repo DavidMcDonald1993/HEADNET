@@ -53,7 +53,7 @@ def main():
 		["g2g_k={:02d}_nofeats".format(k) for k in (1, 3)] + \
 			["NK"] + ["HEDNet_identity", "HEDNet"]
 	attributed_algs = ["g2g_k={:02d}_feats".format(k) for k in (1, 3)] + \
-			["HEADNet"]
+			["HEADNet_identity", "HEADNet"]
 	
 	if args.exp == "rn":
 		datasets = attributed_datasets
@@ -175,7 +175,6 @@ def main():
 				print ("writing ttests for", a1, "and", a2,
 					"to", ttest_df_filename)
 				ttest_df.to_csv(ttest_df_filename)
-
 
 if __name__ == "__main__":
 	main()
