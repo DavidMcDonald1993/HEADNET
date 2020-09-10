@@ -1,6 +1,6 @@
 import keras.backend as K
 import tensorflow as tf 
-from keras.layers import Input, Dense, Lambda, Embedding
+from keras.layers import Input, Dense, Lambda, Embedding, Activation
 from keras.models import Model
 from keras.initializers  import RandomUniform
 from keras import regularizers
@@ -10,7 +10,7 @@ from headnet.losses import asym_hyperbolic_loss
 from headnet.hyperboloid_layers import logarithmic_map, parallel_transport, exp_map_0
 
 reg = 0e-4
-initializer = RandomUniform(-1e-3, 1e-3)
+# initializer = RandomUniform(-1e-3, 1e-3)
 
 def map_to_tangent_space_mu_zero(mus):
 
@@ -64,7 +64,7 @@ def kullback_leibler_divergence(args):
 		keepdims=True)
 
 	kld = 0.5 * (trace_fac + 
-			mu_sq_diff - k - log_det)
+		mu_sq_diff - k - log_det)
 
 	kld = K.squeeze(kld, axis=-1)
 	return K.squeeze(kld, axis=-1)
@@ -79,15 +79,15 @@ def build_headnet(
 
 	if features is not None: # HEADNet with attributes
 
-		print("training using attributes")
+		print("training using node attributes")
 
 		input_layer = Input((features.shape[1],),
 			name="attributed_input_layer")
 
 		input_transform = Dense(
 			num_hidden,
-			activation="relu",
-			kernel_initializer=initializer,
+			# activation="relu",
+			# kernel_initializer=initializer,
 			kernel_regularizer=regularizers.l2(reg),
 			bias_regularizer=regularizers.l2(reg),
 			name="euclidean_transform",
@@ -101,11 +101,12 @@ def build_headnet(
 			name="unattributed_input_layer")
 		input_transform = Embedding(N,
 			num_hidden)(input_layer)
-
+	
+	input_transform = Activation("relu")(input_transform)
 
 	hyperboloid_embedding_layer = Dense(
 		embedding_dim, 
-		kernel_initializer=initializer,
+		# kernel_initializer=initializer,
 		kernel_regularizer=regularizers.l2(reg),
 		bias_regularizer=regularizers.l2(reg),
 		name="dense_to_hyperboloid",
@@ -159,7 +160,7 @@ def build_headnet(
 		kds,
 		name="trainable_model")
 
-	optimizer = AdamOptimizer(1e-3)
+	optimizer = AdamOptimizer(1e-3, )
 
 	trainable_model.compile(optimizer=optimizer, 
 		loss=asym_hyperbolic_loss,
