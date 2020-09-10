@@ -10,6 +10,7 @@ import pickle as pkl
 
 from headnet.utils import load_data
 from evaluation_utils import load_embedding, compute_scores, evaluate_rank_AUROC_AP, evaluate_mean_average_precision, read_edgelist
+from remove_utils import sample_non_edges
 
 import random
 
@@ -72,6 +73,8 @@ def main():
 			nodelist=sorted(graph),
 			weight=None).astype(bool)
 
+	N = graph.shape[0]
+
 	graph_edges = list(zip(*graph.nonzero()))
 	del graph
 
@@ -82,14 +85,18 @@ def main():
 
 	test_edgelist_fn = os.path.join(removed_edges_dir, 
 		"test_edges.tsv")
-	test_non_edgelist_fn = os.path.join(removed_edges_dir, 
-		"test_non_edges.tsv")
+	# test_non_edgelist_fn = os.path.join(removed_edges_dir, 
+		# "test_non_edges.tsv")
 
 	print ("loading test edges from {}".format(test_edgelist_fn))
-	print ("loading test non-edges from {}".format(test_non_edgelist_fn))
+	# print ("loading test non-edges from {}".format(test_non_edgelist_fn))
 
 	test_edges = read_edgelist(test_edgelist_fn)
-	test_non_edges = read_edgelist(test_non_edgelist_fn)
+	# test_non_edges = read_edgelist(test_non_edgelist_fn)
+	test_non_edges = sample_non_edges(range(N), 
+		set(graph_edges).union(test_edges),
+		sample_size=10*len(test_edges))
+
 
 	test_edges = np.array(test_edges)
 	test_non_edges = np.array(test_non_edges)
