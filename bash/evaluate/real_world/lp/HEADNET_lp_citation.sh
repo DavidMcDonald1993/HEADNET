@@ -29,6 +29,8 @@ dim=${dims[$dim_id]}
 seed=${seeds[$seed_id]}
 feat=${feats[$feat_id]}
 
+dataset=cora
+
 echo $dataset $dim $seed $feat
 
 data_dir=datasets/${dataset}

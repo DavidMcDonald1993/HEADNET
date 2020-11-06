@@ -29,6 +29,8 @@ dim=${dims[$dim_id]}
 seed=${seeds[$seed_id]}
 feat=${feats[$feat_id]}
 
+dataset=cora
+
 echo $dataset $dim $seed $feat
 
 data_dir=datasets/${dataset}
@@ -42,6 +44,7 @@ removed_edges_dir=$(printf edgelists/${dataset}/seed=%03d/removed_edges ${seed})
 
 test_results=$(printf \
     "test_results/${dataset}/${exp}/dim=%03d" ${dim})
+    
 if [ ${feat} == feats ]
 then 
     test_results=${test_results}/HEADNet_identity

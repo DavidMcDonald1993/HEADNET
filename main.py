@@ -1,7 +1,6 @@
 from __future__ import print_function
 
 import os
-# os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 import argparse
 import random
 import numpy as np
@@ -25,23 +24,6 @@ from headnet.models import build_headnet
 
 from evaluation_utils import hyperbolic_distance_hyperboloid, hyperbolic_distance_poincare
 
-np.set_printoptions(suppress=True)
-
-# # TensorFlow wizardry
-# config = tf.ConfigProto()
-
-# # Don't pre-allocate memory; allocate as-needed
-# config.gpu_options.allow_growth = True
- 
-# # Only allow a total of half the GPU memory to be allocated
-# # config.gpu_options.per_process_gpu_memory_fraction = 0.5
-
-# config.log_device_placement=False
-# config.allow_soft_placement=True
-
-# # Create a session with the above options specified.
-# K.tensorflow_backend.set_session(tf.Session(config=config))
-
 def parse_args():
 	'''
 	parse args from the command line
@@ -64,10 +46,8 @@ def parse_args():
 		help="Batch size for training (default is 512).")
 	parser.add_argument("--nneg", dest="num_negative_samples", type=int, default=10, 
 		help="Number of negative samples for training (default is 10).")
-	parser.add_argument("--context-size", dest="context_size", type=int, default=1,
-		help="Context size for generating positive samples (default is 1).")
-	parser.add_argument("--patience", dest="patience", type=int, default=100,
-		help="The number of epochs of no improvement in loss before training is stopped. (Default is 100)")
+	parser.add_argument("--patience", dest="patience", type=int, default=25,
+		help="The number of epochs of no improvement in loss before training is stopped. (Default is 25)")
 
 	parser.add_argument("-d", "--dim", dest="embedding_dim", type=int,
 		help="Dimension of embeddings for each layer (default is 10).", default=10)
@@ -104,7 +84,6 @@ def main():
 
 	args.directed = True
 
-	assert args.context_size == 1
 	assert not (args.visualise and args.embedding_dim > 2), "Can only visualise two dimensions"
 	assert args.embedding_path is not None, "you must specify a path to save embedding"
 
@@ -116,7 +95,6 @@ def main():
 		load_data(args)
 	if not args.visualise and node_labels is not None:
 		node_labels = None
-	# assert features is not None
 	print ("Loaded dataset")
 
 	configure_paths(args)
@@ -163,7 +141,7 @@ def main():
 			embedding_directory=args.embedding_path,
 			model=model,
 			embedder=embedder,
-			features=features,)
+			features=features if features is not None else np.arange(N),)#.reshape(N, 1),)
 	]			
 
 	print ("Training with data generator with {} worker threads".format(args.workers))
@@ -197,19 +175,13 @@ def main():
 		embedding, sigmas = embedder.predict(features)
 	else:
 		embedding, sigmas = embedder.predict(np.arange(N))
+
 		embedding = np.squeeze(embedding, 1)
 		sigmas = np.squeeze(sigmas, 1)
 
 	assert np.isfinite(embedding).all()
 	assert np.isfinite(sigmas).all()
 
-	poincare_embedding = hyperboloid_to_poincare_ball(embedding)
-	print ("embedding", np.linalg.norm(poincare_embedding.mean(0)))
-
-	norms = np.linalg.norm(poincare_embedding, axis=-1)
-	print ("norm min", norms.min(), "norm max", norms.max())
-	print ("sigma min", sigmas.min(), "sigma max", sigmas.max())
-		
 	embedding_filename = os.path.join(args.embedding_path,
 		"final_embedding.csv")
 	print ("saving embedding to", embedding_filename)

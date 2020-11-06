@@ -34,6 +34,8 @@ seed=${seeds[$seed_id]}
 exp=${exps[$exp_id]}
 feat=${feats[$feat_id]}
 
+dataset=cora
+
 echo $dataset $dim $seed $exp $feat
 
 data_dir=datasets/${dataset}
@@ -68,8 +70,8 @@ then
 
         args=$(echo --graph ${graph} \
         --embedding ${embedding_dir} --seed ${seed} \
-        --dim ${dim} --workers 1 -e ${e} \
-        --nneg 10)
+        --dim ${dim} --workers 3 -e ${e} \
+        --nneg 10 -v)
         if [ ${feat} == feats ]
         then
             args=${args}" --features ${features}"

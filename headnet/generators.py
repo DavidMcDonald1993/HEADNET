@@ -51,7 +51,6 @@ class TrainingDataGenerator(Sequence):
 		num_positive_samples = self.num_positive_samples
 		node_map = self.node_map
 
-
 		batch_positive_samples = positive_samples[
 			batch_idx * batch_size : \
 			(batch_idx+1) * batch_size

@@ -41,9 +41,6 @@ def load_data(args):
 
 		print ("number of nodes: {}\nnumber of edges: {}\n".format(len(graph), len(graph.edges())))
 
-		# graph = nx.convert_node_labels_to_integers(graph, 
-		# 	ordering="sorted")
-
 	else:
 		raise NotImplementedError
 
@@ -62,10 +59,11 @@ def load_data(args):
 		elif features_filename.endswith(".npz"):
 			
 			features = load_npz(features_filename)
-			assert isinstance(features, csr_matrix)
 
 		else:
 			raise NotImplementedError
+
+		assert isinstance(features, csr_matrix)
 
 	else: 
 		features = None
@@ -92,7 +90,6 @@ def load_data(args):
 
 	else:
 		labels = None
-
 
 	return graph, features, labels
 
@@ -142,8 +139,6 @@ def minkowski_norm(x):
 
 def determine_positive_and_negative_samples(graph, args):
 
-	assert args.context_size == 1
-
 	if isinstance(graph, csr_matrix):
 		print ("graph is sparse adj matrix")
 		positive_samples = np.array(list(zip(*graph.nonzero())))
@@ -160,7 +155,6 @@ def determine_positive_and_negative_samples(graph, args):
 		) ** .75
 		node_map = np.array(sorted_graph, dtype=np.int32)
 
-	# neg_samples = neg_samples.flatten()
 	neg_samples /= neg_samples.sum(axis=-1, keepdims=True)
 	neg_samples = neg_samples.cumsum(axis=-1)
 	assert np.allclose(neg_samples[..., -1], 1)

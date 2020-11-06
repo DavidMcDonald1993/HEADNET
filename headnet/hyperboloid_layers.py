@@ -1,5 +1,3 @@
-# import numpy as np
-
 import keras.backend as K
 
 import tensorflow as tf

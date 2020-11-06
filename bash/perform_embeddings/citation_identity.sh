@@ -34,6 +34,8 @@ seed=${seeds[$seed_id]}
 exp=${exps[$exp_id]}
 feat=${feats[$feat_id]}
 
+dataset=cora
+
 echo $dataset $dim $seed $exp $feat
 
 data_dir=datasets/${dataset}
@@ -52,7 +54,7 @@ features=${data_dir}/feats.npz
 embedding_dir=embeddings_identity_variance/${dataset}/${feat}/${exp}
 embedding_dir=$(printf "${embedding_dir}/seed=%03d/dim=%03d" ${seed} ${dim})
 
-echo embedding directory is $embedding_dir
+echo embedding directory is ${embedding_dir}
 
 if [ ! -f ${embedding_dir}/final_embedding.csv.gz ]
 then 
@@ -69,7 +71,7 @@ then
         args=$(echo --graph ${graph} \
         --embedding ${embedding_dir} --seed ${seed} \
         --dim ${dim} --workers 1 -e ${e} \
-        --nneg 10 --identity_variance)
+        --nneg 10 --identity_variance -v)
         if [ ${feat} == feats ]
         then
             args=${args}" --features ${features}"

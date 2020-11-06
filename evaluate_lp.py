@@ -54,13 +54,6 @@ def main():
 	test_results_filename = os.path.join(test_results_dir, 
 		"{}.pkl".format(args.seed))
 
-	# if check_complete(test_results_filename, args.seed):
-	# 	return
-
-	# test_results_lock_filename = os.path.join(test_results_dir, 
-	# 	"test_results.lock")
-	# touch(test_results_lock_filename)
-
 	args.directed = True
 
 	graph, _, _ = load_data(args)
@@ -74,6 +67,7 @@ def main():
 			weight=None).astype(bool)
 
 	N = graph.shape[0]
+	print ("network has", N, "nodes")
 
 	graph_edges = list(zip(*graph.nonzero()))
 	del graph
@@ -85,18 +79,17 @@ def main():
 
 	test_edgelist_fn = os.path.join(removed_edges_dir, 
 		"test_edges.tsv")
-	# test_non_edgelist_fn = os.path.join(removed_edges_dir, 
-		# "test_non_edges.tsv")
+	test_non_edgelist_fn = os.path.join(removed_edges_dir, 
+		"test_non_edges.tsv")
 
 	print ("loading test edges from {}".format(test_edgelist_fn))
-	# print ("loading test non-edges from {}".format(test_non_edgelist_fn))
+	print ("loading test non-edges from {}".format(test_non_edgelist_fn))
 
 	test_edges = read_edgelist(test_edgelist_fn)
-	# test_non_edges = read_edgelist(test_non_edgelist_fn)
-	test_non_edges = sample_non_edges(range(N), 
-		set(graph_edges).union(test_edges),
-		sample_size=10*len(test_edges))
-
+	test_non_edges = read_edgelist(test_non_edgelist_fn)
+	# test_non_edges = sample_non_edges(range(N), 
+	# 	set(graph_edges).union(test_edges),
+	# 	sample_size=10*len(test_edges))
 
 	test_edges = np.array(test_edges)
 	test_non_edges = np.array(test_non_edges)
@@ -136,8 +129,6 @@ def main():
 
 	print ("saving test results to {}".format(test_results_filename))
 
-	# threadsafe_save_test_results(test_results_lock_filename, 
-	# 	test_results_filename, seed, data=test_results )
 	test_results = pd.Series(test_results)
 
 	with open(test_results_filename, "wb") as f:
