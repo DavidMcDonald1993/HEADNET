@@ -66,7 +66,7 @@ pyparsing==2.4.7
 pyrsistent @ file:///tmp/build/80754af9/pyrsistent_1600141725711/work
 python-dateutil==2.8.1
 pytz==2020.1
-PyYAML==5.3.1
+PyYAML==5.4
 pyzmq==19.0.2
 qtconsole @ file:///tmp/build/80754af9/qtconsole_1600870028330/work
 QtPy==1.9.0
