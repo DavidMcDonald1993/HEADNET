@@ -75,7 +75,7 @@ scipy @ file:///tmp/build/80754af9/scipy_1597686625380/work
 Send2Trash==1.5.0
 six==1.15.0
 tensorboard==1.10.0
-tensorflow==1.10.0
+tensorflow==2.5.1
 termcolor==1.1.0
 terminado==0.9.1
 testpath==0.4.4
