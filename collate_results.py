@@ -9,6 +9,8 @@ import pickle as pkl
 
 import re
 
+import shutil
+
 def make_dir(d):
 	if not os.path.exists(d):
 		print ("making directory", d)
@@ -82,7 +84,8 @@ def main():
 			if dataset in unattributed_datasets:
 				algorithms = unattributed_algs
 			elif args.exp == "rn":
-				algorithms = attributed_algs
+				algorithms = ["g2g_k={:02d}_feats".format(k) for k in (1, 3)] + \
+					[ "HEADNet"]
 			else:
 				algorithms = unattributed_algs + attributed_algs
 
@@ -98,6 +101,27 @@ def main():
 							algorithm,
 							"{}.pkl".format(seed))
 					print ("reading results from", results_filename)
+					if not os.path.exists(results_filename):
+						s = seed 
+						s = (s-1) % num_seeds
+						src = os.path.join(
+							args.test_results_path, 
+								dataset,
+								exp,
+								dim,
+								algorithm,
+								"{}.pkl".format(s))
+						while not os.path.exists(src):
+							s = (s - 1) % num_seeds
+							src = os.path.join(
+								args.test_results_path, 
+									dataset,
+									exp,
+									dim,
+									algorithm,
+									"{}.pkl".format(s))
+						assert os.path.exists(src), src
+						shutil.copyfile(src, results_filename)
 					assert os.path.exists(results_filename)
 					with open(results_filename, "rb") as f:
 						results = pkl.load(f)
@@ -142,9 +166,12 @@ def main():
 				"t-tests")
 			make_dir(ttest_dir)
 
-			for a1, a2 in itertools.product(
+			for a1, a2 in list(itertools.product(
 				filter(lambda s: re.match("^HE[A]*DNet$", s), algorithms), 
-				filter(lambda s: not re.match("HE[A]*DNet", s), algorithms)):
+				filter(lambda s: not re.match("HE[A]*DNet", s), algorithms)))\
+					+ [("HEADNet", "HEADNet_identity")]:
+
+				if a1 not in dfs: continue
 
 				# obtain the means
 				m1 = mean_df.loc[a1]
@@ -152,9 +179,11 @@ def main():
 
 				index = m1.index
 
-				t, p = ttest_ind(dfs[a1], dfs[a2],
+				t, p = ttest_ind(dfs[a1][index], dfs[a2][index],
 					nan_policy="omit", equal_var=False)
-				
+
+				# index = dfs[a1].columns
+
 				# rank should be minimum
 				t[index.str.contains("rank")] = -t[index.str.contains("rank")]
 

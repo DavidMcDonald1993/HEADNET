@@ -3,18 +3,24 @@
 #SBATCH --job-name=CITATION
 #SBATCH --output=CITATION_%A_%a.out
 #SBATCH --error=CITATION_%A_%a.err
-#SBATCH --array=0-1919
+#SBATCH --array=0-29
 #SBATCH --time=10-00:00:00
 #SBATCH --ntasks=2
 #SBATCH --mem=5G
 
 e=1000
 
-datasets=(cora_ml citeseer pubmed cora)
-dims=(5 10 25 50)
+N_WORKERS=1
+
+# datasets=(cora_ml citeseer pubmed cora)
+datasets=(pubmed)
+# dims=(5 10 25 50)
+dims=(2)
 seeds=({0..29})
-exps=(recon_experiment lp_experiment)
-feats=(nofeats feats)
+# exps=(recon_experiment lp_experiment)
+exps=(recon_experiment)
+# feats=(nofeats feats)
+feats=(feats)
 
 num_datasets=${#datasets[@]}
 num_dims=${#dims[@]}
@@ -33,8 +39,6 @@ dim=${dims[$dim_id]}
 seed=${seeds[$seed_id]}
 exp=${exps[$exp_id]}
 feat=${feats[$feat_id]}
-
-dataset=cora
 
 echo $dataset $dim $seed $exp $feat
 
@@ -58,19 +62,19 @@ echo embedding directory is $embedding_dir
 
 if [ ! -f ${embedding_dir}/final_embedding.csv.gz ]
 then 
-    module purge
-    module load bluebear
+    # module purge
+    # module load bluebear
 
     if [ ! -f ${embedding_dir}/final_embedding.csv ]
     then 
         echo ${embedding_dir}/final_embedding.csv is missing -- performing embedding 
 
-        module load TensorFlow/1.10.1-foss-2018b-Python-3.6.6
-        pip install --user keras==2.2.4
+        # module load TensorFlow/1.10.1-foss-2018b-Python-3.6.6
+        # pip install --user keras==2.2.4
 
         args=$(echo --graph ${graph} \
         --embedding ${embedding_dir} --seed ${seed} \
-        --dim ${dim} --workers 3 -e ${e} \
+        --dim ${dim} --workers ${N_WORKERS} -e ${e} \
         --nneg 10 -v)
         if [ ${feat} == feats ]
         then

@@ -1,6 +1,22 @@
 import numpy as np
 import matplotlib
 import matplotlib.pyplot as plt
+
+SMALL_SIZE = 16
+MEDIUM_SIZE = 20
+BIGGER_SIZE = 22
+
+plt.rc('font', size=BIGGER_SIZE)          # controls default text sizes
+plt.rc('axes', titlesize=BIGGER_SIZE)     # fontsize of the axes title
+plt.rc('axes', labelsize=BIGGER_SIZE)    # fontsize of the x and y labels
+plt.rc('xtick', labelsize=BIGGER_SIZE)    # fontsize of the tick labels
+plt.rc('ytick', labelsize=BIGGER_SIZE)    # fontsize of the tick labels
+plt.rc('legend', fontsize=BIGGER_SIZE)    # legend fontsize
+plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
+
+plt.rcParams.update({'text.color' : "black",
+                     'axes.labelcolor' : "black"})
+
 from matplotlib.patches import Circle, Wedge, Polygon, ArrowStyle
 from matplotlib.collections import PatchCollection
 from matplotlib import patches
@@ -185,8 +201,11 @@ def draw_graph(graph, embedding, labels, path, s=25):
     nx.draw_networkx_edges(graph, pos=pos, width=.05, node_size=node_sizes)
     # nx.draw_networkx_edge_labels(graph, pos=pos, edge_labels=nx.get_edge_attributes(graph, name="weight"))
 
-    plt.savefig(path)
-    plt.close()
+    if path is not None:
+        plt.savefig(path)
+        plt.close()
+    else:
+        plt.show()
 
 def plot_degree_dist(graph, name, filename):
 
@@ -210,13 +229,23 @@ def plot_degree_dist(graph, name, filename):
     m, c = np.polyfit(np.log(deg), np.log(counts), 1)
     y_fit = np.exp(m*np.log(deg) + c)
 
-    ax.scatter(deg, counts, marker="x")
-    ax.plot(deg, y_fit, ':', c="r")
-    ax.set(
-        # title="{} Degree Distribution".format(name), 
-        xscale="log", yscale="log", 
-        xlabel="Degree", ylabel="Probability",)
+    plt.scatter(deg, counts, marker="x")
+    plt.plot(deg, y_fit, ':', c="r")
+    # plt.set(
+    #     # title="{} Degree Distribution".format(name), 
+    #     xscale="log", yscale="log", 
+    #     # xlabel="Degree", ylabel="Probability",
+    #     )
+    plt.xlabel('Degree', fontsize=30)
+    plt.ylabel('Probability', fontsize=30, )
+    plt.xscale("log")
+    plt.yscale("log")
+    ax.xaxis.label.set_color('black')
+    ax.yaxis.label.set_color('black')
+    # ax.xaxis.ticks.set_color("black")
+    ax.tick_params(axis='x', colors='black')
+    ax.tick_params(axis='y', colors='black')
     # ax.set_ylim(bottom=.9)
     # plt.show()
     print ("saving degree distribution plot to", filename)
-    plt.savefig(filename)
+    plt.savefig(filename, dpi=400)

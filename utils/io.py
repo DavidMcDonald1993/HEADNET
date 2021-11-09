@@ -1,15 +1,19 @@
-from __future__ import print_function
 
+import os 
 import re
-import os
+
 import numpy as np
 import networkx as nx
 
-import pandas as pd
-
-import pickle as pkl
-
 from scipy.sparse import csr_matrix, load_npz
+
+
+def write_edgelist_to_file(edgelist, filename):
+	# g = nx.DiGraph(edgelist)
+	# nx.write_edgelist(g, filename, delimiter="\t")
+	with open(filename, "w") as f:
+		for u, v in edgelist:
+			f.write("{}\t{}\n".format(u, v))
 
 def load_data(args):
 
@@ -52,7 +56,7 @@ def load_data(args):
 		if features_filename.endswith(".csv") or features_filename.endswith(".csv.gz"):
 			features = pd.read_csv(features_filename, 
 				index_col=0, sep=",")
-			feattures = features.reindex(sorted(features.index)).values
+			features = features.reindex(sorted(features.index)).values
 			print ("no scaling applied")
 			features = csr_matrix(features)
 
@@ -78,13 +82,13 @@ def load_data(args):
 				.values.astype(np.int)
 			assert len(labels.shape) == 2
 		elif labels_filename.endswith(".pkl"):
-			raise Exception
+			raise NotImplementedError
 			with open(labels_filename, "rb") as f:
 				labels = pkl.load(f)
 			labels = np.array([labels[n] 
 				for n in sorted(graph)], dtype=np.int)
 		else:
-			raise Exception
+			raise NotImplementedError
 
 		print ("labels shape is {}\n".format(labels.shape))
 
@@ -116,49 +120,3 @@ def load_weights(model, embedding_directory):
 		initial_epoch = 0
 
 	return model, initial_epoch
-
-def hyperboloid_to_poincare_ball(X):
-	return X[:,:-1] / (1 + X[:,-1,None])
-
-def hyperboloid_to_klein(X):
-	return X[:,:-1] / X[:,-1,None]
-
-def poincare_ball_to_hyperboloid(X):
-	x = 2 * X
-	t = 1. + np.sum(np.square(X), axis=-1, keepdims=True)
-	x = np.concatenate([x, t], axis=-1)
-	return 1 / (1. - np.sum(np.square(X), axis=-1, keepdims=True)) * x
-
-def minkowski_dot(x, y):
-	assert len(x.shape) == len(y.shape)
-	return (np.sum(x[...,:-1] * y[...,:-1], axis=-1, keepdims=True) 
-		- x[...,-1:] * y[...,-1:])
-
-def minkowski_norm(x):
-	return np.sqrt( np.maximum(minkowski_dot(x, x), 0.) )
-
-def determine_positive_and_negative_samples(graph, args):
-
-	if isinstance(graph, csr_matrix):
-		print ("graph is sparse adj matrix")
-		positive_samples = np.array(list(zip(*graph.nonzero())))
-		neg_samples = graph.sum(0 ).A.flatten() + graph.sum(1).A.flatten()
-		neg_samples = neg_samples ** .75
-		node_map = None
-	else:
-		print ("graph is edgelist")
-		sorted_graph = sorted(graph)
-		positive_samples = np.array(list(graph.edges()))
-		neg_samples = np.array(
-			[graph.degree(n) 
-				for n in sorted_graph]
-		) ** .75
-		node_map = np.array(sorted_graph, dtype=np.int32)
-
-	neg_samples /= neg_samples.sum(axis=-1, keepdims=True)
-	neg_samples = neg_samples.cumsum(axis=-1)
-	assert np.allclose(neg_samples[..., -1], 1)
-
-	print ("found", positive_samples.shape[0], "positive samples")
-
-	return positive_samples, neg_samples, node_map

@@ -5,7 +5,6 @@ import pandas as pd
 
 import glob
 
-from sklearn.metrics import average_precision_score, roc_auc_score, roc_curve
 
 import functools
 import fcntl
@@ -13,6 +12,9 @@ import fcntl
 import random
 
 import types
+
+from sklearn.metrics import average_precision_score, roc_auc_score, roc_curve
+
 
 def euclidean_distance(u, v):
 	return np.linalg.norm(u - v, axis=-1)

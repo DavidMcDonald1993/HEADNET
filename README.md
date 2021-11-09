@@ -12,13 +12,8 @@ Authors: David MCDONALD (davemcdonald93@gmail.com) and Shan HE (s.he@cs.bham.ac.
 * Scikit-multilearn
 * Keras
 
-## Required packages (pip)
-Install the required packages with 
-```bash
-pip install -r requirements.txt 
-```
 ## Setup environment (conda) 
-The conda environment is described in headnet_env.yml.
+The conda environment is described in environment.yml.
 
 Run 
 ```bash
@@ -34,7 +29,7 @@ to activate it.
 # How to use:
 Run the code with 
 ```bash
-python main.py --graph path/to/graph.npz --features path/to/features.csv --embedding path/to/save/embedding -e *num_epochs*
+python main.py --graph path/to/graph.npz --features path/to/features.csv --embedding path/to/save/embedding.csv -e *num_epochs* --dim *embedding_dim*
 ```
 Additional options can be viewed with 
 ```bash

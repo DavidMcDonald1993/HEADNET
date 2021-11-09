@@ -72,8 +72,6 @@ def main():
 	if not os.path.exists(removed_edges_dir):
 		os.makedirs(removed_edges_dir, exist_ok=True)
 
-	# training_edgelist_fn = os.path.join(training_edgelist_dir, 
-	# 	"graph.npz")
 
 	val_edgelist_fn = os.path.join(removed_edges_dir, 
 		"val_edges.tsv")

@@ -1,20 +1,7 @@
-from __future__ import print_function
 
-# import random
 import numpy as np
-# import scipy as sp
-# import networkx as nx
 
 from keras.utils import Sequence
-# from keras import backend as K
-
-# import itertools
-
-# from sklearn.preprocessing import StandardScaler
-
-# from collections import Counter
-
-# import threading
 
 class TrainingDataGenerator(Sequence):
 
@@ -48,7 +35,7 @@ class TrainingDataGenerator(Sequence):
 		positive_samples = self.positive_samples
 		num_negative_samples = self.num_negative_samples
 		negative_samples = self.negative_samples
-		num_positive_samples = self.num_positive_samples
+		# num_positive_samples = self.num_positive_samples
 		node_map = self.node_map
 
 		batch_positive_samples = positive_samples[

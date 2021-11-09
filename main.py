@@ -1,6 +1,8 @@
 from __future__ import print_function
 
 import os
+os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+
 import argparse
 import random
 import numpy as np
@@ -15,14 +17,15 @@ from keras.callbacks import ModelCheckpoint, TerminateOnNaN, EarlyStopping
 
 import tensorflow as tf
 
-from headnet.utils import hyperboloid_to_poincare_ball, load_data
-from headnet.utils import  determine_positive_and_negative_samples, load_weights
 from headnet.generators import TrainingDataGenerator
-from headnet.visualise import draw_graph, plot_degree_dist
 from headnet.callbacks import Checkpointer
 from headnet.models import build_headnet
 
-from evaluation_utils import hyperbolic_distance_hyperboloid, hyperbolic_distance_poincare
+from utils.io import load_data, load_weights
+from utils.hyperbolic_functions import hyperboloid_to_poincare_ball
+from utils.sampling import determine_positive_and_negative_samples
+from utils.visualise import draw_graph
+
 
 def parse_args():
 	'''
@@ -104,6 +107,7 @@ def main():
 	positive_samples, negative_samples, node_map = \
 		determine_positive_and_negative_samples(graph, args)
 
+	# number of nodes
 	N = graph.shape[0]
 
 	if not args.visualise:
@@ -153,9 +157,10 @@ def main():
 		args,
 	)
 
-	model.fit_generator(training_generator, 
+	model.fit_generator(
+		training_generator, 
 		workers=args.workers,
-		use_multiprocessing=False,
+		use_multiprocessing=True,
 		steps_per_epoch=len(training_generator),
 		epochs=args.num_epochs, 
 		initial_epoch=initial_epoch, 
@@ -194,8 +199,10 @@ def main():
 	variance_df = pd.DataFrame(sigmas)
 	variance_df.to_csv(variance_filename)
 
-	if args.visualise:
-		draw_graph(graph,
+	if args.embedding_dim==2 and args.visualise:
+		poincare_embedding = hyperboloid_to_poincare_ball(embedding)
+		draw_graph(
+			graph,
 			poincare_embedding, 
 			node_labels, 
 			path="2d-poincare-disk-visualisation.png")

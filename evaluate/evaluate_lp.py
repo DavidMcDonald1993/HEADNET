@@ -1,6 +1,16 @@
+import sys
+import os.path
+
+
+if __name__ == "__main__":
+
+    sys.path.insert(1, 
+        os.path.abspath(os.path.join(os.path.dirname(__file__), os.path.pardir)))
+
 import os
 
 import random
+
 import numpy as np
 import networkx as nx
 import pandas as pd
@@ -9,36 +19,39 @@ import argparse
 
 import pickle as pkl
 
-from headnet.utils import load_data
-from evaluation_utils import load_embedding, compute_scores, evaluate_rank_AUROC_AP, evaluate_mean_average_precision
-from remove_utils import sample_non_edges
+from utils.io import load_data
+from evaluate.evaluation_utils import (load_embedding, evaluate_rank_AUROC_AP, evaluate_mean_average_precision, read_edgelist)
+
 
 def parse_args():
 
-	parser = argparse.ArgumentParser(description='Load Embeddings and evaluate reconstruction')
+	parser = argparse.ArgumentParser(description='Load Embeddings and evaluate link prediction')
 	
 	parser.add_argument("--graph", dest="graph", type=str, 
-		help="edgelist to load.")
+		help="graph to load.")
 	parser.add_argument("--features", dest="features", type=str, 
 		help="features to load.")
 	parser.add_argument("--labels", dest="labels", type=str, 
 		help="path to labels")
-
-	parser.add_argument('--directed', action="store_true", help='flag to train on directed graph')
-
+	parser.add_argument("--removed_edges_dir", dest="removed_edges_dir", type=str, 
+		help="path to load removed edges")
+	
 	parser.add_argument("--embedding", dest="embedding_directory",  
 		help="directory of embedding to load.")
 
 	parser.add_argument("--test-results-dir", dest="test_results_dir",  
 		help="path to save results.")
 
+	parser.add_argument('--directed', action="store_true", help='flag to train on directed graph')
+
 	parser.add_argument("--seed", type=int, default=0)
-	
+
 	parser.add_argument("--dist_fn", dest="dist_fn", type=str,
 		choices=["poincare", "hyperboloid", "euclidean", 
-			"kle", "klh", "st"])
+		"kle", "klh", "st"])
 
 	return parser.parse_args()
+
 
 def main():
 
@@ -47,16 +60,8 @@ def main():
 	test_results_dir = args.test_results_dir
 	if not os.path.exists(test_results_dir):
 		os.makedirs(test_results_dir, exist_ok=True)
-	
 	test_results_filename = os.path.join(test_results_dir, 
 		"{}.pkl".format(args.seed))
-
-	# if check_complete(test_results_filename, args.seed):
-	# 	return
-
-	# test_results_lock_filename = os.path.join(test_results_dir, 
-	# 	"test_results.lock")
-	# touch(test_results_lock_filename)
 
 	args.directed = True
 
@@ -70,17 +75,27 @@ def main():
 			nodelist=sorted(graph),
 			weight=None).astype(bool)
 
-	random.seed(args.seed)
-	
-	test_edges = list(zip(*graph.nonzero()))
-	num_edges = len(test_edges)
+	N = graph.shape[0]
+	print ("network has", N, "nodes")
 
-	nodes = set(range(graph.shape[0]))
+	graph_edges = list(zip(*graph.nonzero()))
 	del graph
-	test_non_edges = sample_non_edges(
-		nodes, 
-		set(test_edges),
-		num_edges)
+
+	seed = args.seed
+	random.seed(seed)
+
+	removed_edges_dir = args.removed_edges_dir
+
+	test_edgelist_fn = os.path.join(removed_edges_dir, 
+		"test_edges.tsv")
+	test_non_edgelist_fn = os.path.join(removed_edges_dir, 
+		"test_non_edges.tsv")
+
+	print ("loading test edges from {}".format(test_edgelist_fn))
+	print ("loading test non-edges from {}".format(test_non_edgelist_fn))
+
+	test_edges = read_edgelist(test_edgelist_fn)
+	test_non_edges = read_edgelist(test_non_edgelist_fn)
 
 	test_edges = np.array(test_edges)
 	test_non_edges = np.array(test_non_edges)
@@ -89,38 +104,39 @@ def main():
 	print ("number of test non edges:", len(test_non_edges))
 
 	embedding = load_embedding(args.dist_fn, 
-		args.embedding_directory)
-	
+	args.embedding_directory)
+
 	test_results = dict()
 
-	(mean_rank_recon, ap_recon, 
-		roc_recon) = evaluate_rank_AUROC_AP(
+	(mean_rank_lp, ap_lp, 
+		roc_lp) = evaluate_rank_AUROC_AP(
 			embedding,
 			test_edges, 
 			test_non_edges,
 			args.dist_fn)
 
-	test_results.update(
-		{"mean_rank_recon": mean_rank_recon, 
-		"ap_recon": ap_recon,
-		"roc_recon": roc_recon})
+	test_results.update({"mean_rank_lp": mean_rank_lp, 
+		"ap_lp": ap_lp,
+		"roc_lp": roc_lp})
 
-	map_recon, precisions_at_k = \
-		evaluate_mean_average_precision(
+	map_lp, precisions_at_k = evaluate_mean_average_precision(
 		embedding, 
 		test_edges,
-		args.dist_fn)
-	test_results.update({"map_recon": map_recon})
+		args.dist_fn, 
+		graph_edges=graph_edges
+	)
+
+	test_results.update({"map_lp": map_lp})
 
 	for k, pk in precisions_at_k.items():
 		print ("precision at", k, pk)
 	test_results.update({"p@{}".format(k): pk
 		for k, pk in precisions_at_k.items()})
 
-	print ("saving test results to {}".format(
-		test_results_filename))
+	print ("saving test results to {}".format(test_results_filename))
 
 	test_results = pd.Series(test_results)
+
 	with open(test_results_filename, "wb") as f:
 		pkl.dump(test_results, f, pkl.HIGHEST_PROTOCOL)
 

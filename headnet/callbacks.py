@@ -5,9 +5,6 @@ import os
 
 from keras.callbacks import Callback
 
-from headnet.utils import hyperboloid_to_poincare_ball
-
-
 class Checkpointer(Callback):
 
 	def __init__(self, 

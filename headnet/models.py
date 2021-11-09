@@ -2,11 +2,12 @@ import keras.backend as K
 import tensorflow as tf 
 from keras.layers import Input, Dense, Lambda, Embedding, Activation
 from keras.models import Model
-from keras.initializers  import RandomUniform
+# from keras.initializers  import RandomUniform
 from keras import regularizers
+
 from tensorflow.train import AdamOptimizer
 
-from headnet.losses import asym_hyperbolic_loss
+from headnet.losses import asymmetric_hyperbolic_loss
 from headnet.hyperboloid_layers import logarithmic_map, parallel_transport, exp_map_0
 
 reg = 0e-4
@@ -86,7 +87,6 @@ def build_headnet(
 
 		input_transform = Dense(
 			num_hidden,
-			# activation="relu",
 			# kernel_initializer=initializer,
 			kernel_regularizer=regularizers.l2(reg),
 			bias_regularizer=regularizers.l2(reg),
@@ -99,7 +99,8 @@ def build_headnet(
 
 		input_layer = Input((1,), 
 			name="unattributed_input_layer")
-		input_transform = Embedding(N,
+		input_transform = Embedding(
+			N,
 			num_hidden)(input_layer)
 	
 	input_transform = Activation("relu")(input_transform)
@@ -162,8 +163,9 @@ def build_headnet(
 
 	optimizer = AdamOptimizer(1e-3, )
 
-	trainable_model.compile(optimizer=optimizer, 
-		loss=asym_hyperbolic_loss,
+	trainable_model.compile(
+		optimizer=optimizer, 
+		loss=asymmetric_hyperbolic_loss,
 		target_tensors=[ tf.placeholder(dtype=tf.int64, 
 			shape=(None, 1)),])
 

@@ -20,9 +20,7 @@ def main():
         graph = nx.read_weighted_edgelist(edgelist,
             create_using=nx.DiGraph())
         
-        filename = os.path.join("",
-            # "datasets", 
-            # dataset, 
+        filename = os.path.join(".",
             "{}_degree_dist.png".format(dataset))
         plot_degree_dist(graph, dataset.capitalize(), filename)
 
