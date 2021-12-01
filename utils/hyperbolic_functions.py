@@ -19,3 +19,10 @@ def minkowski_dot(x, y):
 
 def minkowski_norm(x):
 	return np.sqrt( np.maximum(minkowski_dot(x, x), 0.) )
+
+def hyperboloid_to_klein(X):
+	return X[:,:-1] / X[:,-1:]
+
+def poincare_ball_to_klein(X):
+	norm = np.linalg.norm(X, axis=-1, keepdims=True)
+	return 2 * norm / (1 + norm**2) * X / norm

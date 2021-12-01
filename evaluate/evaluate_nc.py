@@ -31,10 +31,15 @@ from sklearn.preprocessing import LabelBinarizer
 
 from skmultilearn.model_selection import IterativeStratification
 
-from utils.hyperbolic_functions import (hyperboloid_to_klein, 
-	poincare_ball_to_hyperboloid, hyperboloid_to_poincare_ball,
-	hyperboloid_to_poincare_ball, poincare_ball_to_klein)
-from utils.io import load_data, load_embedding
+from utils.hyperbolic_functions import (
+	# hyperboloid_to_klein, 
+	# poincare_ball_to_hyperboloid, 
+	hyperboloid_to_poincare_ball,
+	hyperboloid_to_poincare_ball, 
+	poincare_ball_to_klein,
+	)
+from utils.io import load_data
+from evaluate.evaluation_utils import load_embedding
 
 def compute_measures( 
     labels, 
@@ -73,8 +78,10 @@ def evaluate_kfold_label_classification(
 
 	else:
 		print ("multi-label classification")
-		sss = IterativeStratification(n_splits=k, 
-			order=1)
+		sss = IterativeStratification(
+			n_splits=k, 
+			order=1, # consider single labels only 
+			)
 		model = OneVsRestClassifier(model, )
 			
 	k_fold_rocs = np.zeros(k)
@@ -82,9 +89,9 @@ def evaluate_kfold_label_classification(
 	k_fold_precisions = np.zeros(k)
 	k_fold_recalls = np.zeros(k)
 
-	for i, (split_train, split_test) in enumerate(\
-		sss.split(embedding, labels, )):
-		print ("Fold", i+1, "fitting model")
+	for i, (split_train, split_test) in enumerate(sss.split(embedding, labels, )):
+		print ("Fold", i+1, "fitting model...")
+
 		model.fit(embedding[split_train], labels[split_train])	
 		probs = model.predict_proba(embedding[split_test])
 
@@ -92,28 +99,30 @@ def evaluate_kfold_label_classification(
 			k_fold_f1s[i], 
 			k_fold_precisions[i], 
 			k_fold_recalls[i]) = compute_measures(
-				labels[split_test],
-				probs,)
+				labels=labels[split_test],
+				probs=probs,)
 
 		print ("Completed {}/{} folds".format(i+1, k))
 
 	return (np.mean(k_fold_rocs), np.mean(k_fold_f1s),
 		np.mean(k_fold_precisions), np.mean(k_fold_recalls))
 
-def evaluate_node_classification(
+def evaluate_node_classification_with_label_fraction(
 	embedding, 
 	labels,
-	label_percentages=np.arange(0.02, 0.11, 0.01), 
-	n_repeats=10):
+	label_fractions=np.arange(0.02, 0.11, 0.01), 
+	n_repeats=30,
+	):
 
 	print ("Evaluating node classification")
 
-	f1_micros = np.zeros((n_repeats, len(label_percentages)))
-	f1_macros = np.zeros((n_repeats, len(label_percentages)))
+	f1_micros = np.zeros((n_repeats, len(label_fractions)))
+	f1_macros = np.zeros((n_repeats, len(label_fractions)))
 	
 	# model = LogisticRegressionCV(max_iter=1000,
 	# 	n_jobs=-1)
 	model = SVC(probability=True)
+	print ("USING SVC")
 
 	if labels.shape[1] == 1:
 		print ("single label clasification")
@@ -122,7 +131,7 @@ def evaluate_node_classification(
 		split = StratifiedShuffleSplit
 		for seed in range(n_repeats):
 		
-			for i, label_percentage in enumerate(label_percentages):
+			for i, label_percentage in enumerate(label_fractions):
 				print ("processing label percentage", i, 
 					":", "{:.02f}".format(label_percentage))
 				sss = split(n_splits=1, 
@@ -152,7 +161,7 @@ def evaluate_node_classification(
 
 		for seed in range(n_repeats):
 		
-			for i, label_percentage in enumerate(label_percentages):
+			for i, label_percentage in enumerate(label_fractions):
 				print ("processing label percentage", i, 
 					":", "{:.02f}".format(label_percentage))
 				sss = split(n_splits=2, order=1, #random_state=seed,
@@ -168,14 +177,14 @@ def evaluate_node_classification(
 				f1_macros[seed,i] = f1_macro
 			print ("completed repeat {}".format(seed+1))
 
-	return label_percentages, f1_micros.mean(axis=0), f1_macros.mean(axis=0)
+	return label_fractions, f1_micros.mean(axis=0), f1_macros.mean(axis=0)
 
 def parse_args():
 
 	parser = argparse.ArgumentParser(description='Load Embeddings and evaluate node classification')
 	
-	parser.add_argument("--edgelist", dest="edgelist", type=str, 
-		help="edgelist to load.")
+	parser.add_argument("--graph", dest="graph", type=str, 
+		help="graph to load.")
 	parser.add_argument("--features", dest="features", type=str, 
 		help="features to load.")
 	parser.add_argument("--labels", dest="labels", type=str, 
@@ -192,7 +201,7 @@ def parse_args():
 	parser.add_argument("--seed", type=int, default=0)
 
 	parser.add_argument("--dist_fn", dest="dist_fn", type=str,
-		choices=["poincare", "hyperboloid", "euclidean"])
+		choices=["poincare", "hyperboloid", "euclidean", "kle", "klh"])
 
 	return parser.parse_args()
 
@@ -215,6 +224,8 @@ def main():
 	print ("Loaded dataset")
 
 	embedding = load_embedding(args.dist_fn, args.embedding_directory)
+	if isinstance(embedding, tuple):
+		embedding, variance = embedding
 
 	min_count = 10
 	if node_labels.shape[1] == 1: # remove any node belonging to an under-represented class
@@ -223,6 +234,7 @@ def main():
 			for l in node_labels.flatten()])
 		embedding = embedding[mask]
 		node_labels = node_labels[mask]
+
 	else:
 		assert node_labels.shape[1] > 1
 		idx = node_labels.sum(0) >= min_count
@@ -231,7 +243,7 @@ def main():
 		embedding = embedding[idx]
 		node_labels = node_labels[idx]
 
-	if args.dist_fn == "hyperboloid":
+	if args.dist_fn in {"hyperboloid", "klh"}:
 		print ("loaded a hyperboloid embedding")
 		print ("projecting from hyperboloid to poincare")
 		embedding = hyperboloid_to_poincare_ball(embedding)
@@ -246,7 +258,7 @@ def main():
 	test_results = {}
 	
 	label_percentages, f1_micros, f1_macros = \
-		evaluate_node_classification(embedding, node_labels)
+		evaluate_node_classification_with_label_fraction(embedding, node_labels)
 
 	for label_percentage, f1_micro, f1_macro in zip(label_percentages, f1_micros, f1_macros):
 		print ("{:.2f}".format(label_percentage), 
@@ -254,6 +266,8 @@ def main():
 			"macro = {:.2f}".format(f1_macro) )
 		test_results.update({"{:.2f}_micro".format(label_percentage): f1_micro})
 		test_results.update({"{:.2f}_macro".format(label_percentage): f1_macro})
+	
+
 
 	k = 10
 	k_fold_roc, k_fold_f1, k_fold_precision, k_fold_recall = \
@@ -267,7 +281,7 @@ def main():
 		})
 
 	print ("saving test results to {}".format(test_results_filename))
-	
+
 	test_results = pd.Series(test_results)
 	with open(test_results_filename, "wb") as f:
 		pkl.dump(test_results, f, pkl.HIGHEST_PROTOCOL)

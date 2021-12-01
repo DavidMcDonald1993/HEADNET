@@ -103,8 +103,7 @@ def main():
 	print ("number of test edges:", len(test_edges))
 	print ("number of test non edges:", len(test_non_edges))
 
-	embedding = load_embedding(args.dist_fn, 
-	args.embedding_directory)
+	embedding = load_embedding(args.dist_fn, args.embedding_directory)
 
 	test_results = dict()
 

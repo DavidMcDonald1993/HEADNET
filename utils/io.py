@@ -3,6 +3,7 @@ import os
 import re
 
 import numpy as np
+import pandas as pd
 import networkx as nx
 
 from scipy.sparse import csr_matrix, load_npz

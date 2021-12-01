@@ -52,6 +52,111 @@ def sample_non_edges(nodes, edges, sample_size):
 		# 	non_edges.append(edge)
 	return list(non_edges)
 
+def determine_positive_samples_and_probs(graph, features, args):
+
+	N = len(graph)
+	negative_samples = np.ones((N, N), dtype=bool)
+	np.fill_diagonal(negative_samples, 0)
+
+	nodes = sorted(graph)
+
+	if args.no_walks:
+
+		positive_samples = list(graph.edges())
+		positive_samples += [(v, u) # undirected graph
+			for u, v in positive_samples]
+
+		counts = np.array([graph.degree(u)
+			for u in sorted(graph)])
+
+		if not args.all_negs:
+			for n in nodes:
+				negative_samples[n, list(graph.neighbors(n))] = 0
+
+	else:
+		positive_samples = []
+		# positive_samples = dict()
+		counts = np.zeros(N)
+
+		print ("determining positive and negative samples", 
+			"using random walks")
+
+		walks = perform_walks(graph, features, args)
+
+		if not args.visualise:
+			del graph
+		del features
+
+		context_size = args.context_size
+
+		for num_walk, walk in enumerate(walks):
+			for i in range(len(walk)):
+				u = walk[i]
+				counts[u] += 1
+				for j in range(context_size):
+
+					if i+j+1 >= len(walk):
+						break
+					v = walk[i+j+1]
+					if u == v:
+						continue
+
+					positive_samples.append((u, v))
+					positive_samples.append((v, u))
+					# if (u, v) not in positive_samples:
+					# 	positive_samples[(u, v)] = 0
+					# if (v, u) not in positive_samples:
+					# 	positive_samples[(v, u)] = 0
+					# positive_samples[(u, v)] += 1
+					# positive_samples[(v, u)] += 1
+
+					if not args.all_negs:
+						negative_samples[u, v] = 0
+						negative_samples[v, u] = 0
+
+			if num_walk % 1000 == 0:  
+				print ("processed walk {:04d}/{}".format(
+					num_walk, 
+					len(walks)
+					))
+
+	print ("DETERMINED POSITIVE AND NEGATIVE SAMPLES")
+	print ("found {} positive sample pairs".format(
+		len(positive_samples)))
+
+	counts = counts ** 0.75
+	probs = counts[None, :] 
+	probs = probs * negative_samples
+	assert (probs > 0).any(axis=-1).all(), \
+		"a node in the network does not have any negative samples"
+	probs /= probs.sum(axis=-1, keepdims=True)
+	probs = probs.cumsum(axis=-1)
+
+	assert np.allclose(probs[:,-1], 1)
+
+	print ("PREPROCESSED NEGATIVE SAMPLE PROBABILTIES")
+
+	positive_samples = np.array(positive_samples)
+
+	if not args.use_generator:
+		print ("SORTING POSITIVE SAMPLES")
+		idx = positive_samples[:,0].argsort()
+		positive_samples = positive_samples[idx]
+		print ("SORTED POSITIVE SAMPLES")
+
+	return positive_samples, probs
+
+def select_negative_samples(positive_samples, probs, num_negative_samples):
+
+	negative_samples = (choose_negative_samples(x, num_negative_samples) 
+		for x in ((u, count, probs[u]) 
+		for u, count in sorted(Counter(positive_samples[:,0]).items(), key=lambda x: x[0])))
+	negative_samples = np.concatenate([arr for _, arr in 
+		sorted(negative_samples, key=lambda x: x[0])], axis=0,)
+
+	print ("selected negative samples")
+
+	return positive_samples, negative_samples
 
 def determine_positive_and_negative_samples_using_random_walks(graph, features, args):
 
@@ -61,115 +166,6 @@ def determine_positive_and_negative_samples_using_random_walks(graph, features, 
 
 	if not isinstance(nodes, set):
 		nodes = set(nodes)
-
-	def determine_positive_samples_and_probs(graph, features, args):
-
-		N = len(graph)
-		negative_samples = np.ones((N, N), dtype=bool)
-		np.fill_diagonal(negative_samples, 0)
-
-		if args.no_walks:
-
-			positive_samples = list(graph.edges())
-			positive_samples += [(v, u) # undirected graph
-				for u, v in positive_samples]
-
-			counts = np.array([graph.degree(u)
-				for u in sorted(graph)])
-
-			if not args.all_negs:
-				for n in nodes:
-					negative_samples[n, list(graph.neighbors(n))] = 0
-	
-		else:
-			positive_samples = []
-			# positive_samples = dict()
-			counts = np.zeros(N)
-
-			print ("determining positive and negative samples", 
-				"using random walks")
-
-			walks = perform_walks(graph, features, args)
-
-			if not args.visualise:
-				del graph
-			del features
-
-			context_size = args.context_size
-
-			for num_walk, walk in enumerate(walks):
-				for i in range(len(walk)):
-					u = walk[i]
-					counts[u] += 1
-					for j in range(context_size):
-
-						if i+j+1 >= len(walk):
-							break
-						v = walk[i+j+1]
-						if u == v:
-							continue
-
-						positive_samples.append((u, v))
-						positive_samples.append((v, u))
-						# if (u, v) not in positive_samples:
-						# 	positive_samples[(u, v)] = 0
-						# if (v, u) not in positive_samples:
-						# 	positive_samples[(v, u)] = 0
-						# positive_samples[(u, v)] += 1
-						# positive_samples[(v, u)] += 1
-
-						if not args.all_negs:
-							negative_samples[u, v] = 0
-							negative_samples[v, u] = 0
-
-				if num_walk % 1000 == 0:  
-					print ("processed walk {:04d}/{}".format(
-						num_walk, 
-						# len(graph) * args.num_walks
-						len(walks)
-						))
-
-		print ("DETERMINED POSITIVE AND NEGATIVE SAMPLES")
-		print ("found {} positive sample pairs".format(
-			len(positive_samples)))
-
-		counts = counts ** 0.75
-		probs = counts[None, :] 
-		probs = probs * negative_samples
-		assert (probs > 0).any(axis=-1).all(), \
-			"a node in the network does not have any negative samples"
-		probs /= probs.sum(axis=-1, keepdims=True)
-		probs = probs.cumsum(axis=-1)
-
-		assert np.allclose(probs[:,-1], 1)
-
-		print ("PREPROCESSED NEGATIVE SAMPLE PROBABILTIES")
-
-		positive_samples = np.array(positive_samples)
-
-		if not args.use_generator:
-			print ("SORTING POSITIVE SAMPLES")
-			idx = positive_samples[:,0].argsort()
-			positive_samples = positive_samples[idx]
-			print ("SORTED POSITIVE SAMPLES")
-
-		return positive_samples, probs
-
-	def select_negative_samples(positive_samples, probs, num_negative_samples):
-
-		# with Pool(processes=None) as p:
-		# 	negative_samples = p.map(functools.partial(choose_negative_samples,
-		# 	num_negative_samples=num_negative_samples), 
-		# 	((u, count, probs[u]) for u, count in Counter(positive_samples[:,0]).items()))
-		negative_samples = (choose_negative_samples(x, num_negative_samples) 
-			for x in ((u, count, probs[u]) 
-			for u, count in sorted(Counter(positive_samples[:,0]).items(), key=lambda x: x[0])))
-		negative_samples = np.concatenate([arr for _, arr in 
-			sorted(negative_samples, key=lambda x: x[0])], axis=0,)
-
-		print ("selected negative samples")
-
-		return positive_samples, negative_samples
 
 	positive_samples, probs = \
 		determine_positive_samples_and_probs(
@@ -245,10 +241,10 @@ class Graph():
 
 			elif len(cur_nbrs) > 0:
 				if len(walk) == 1 or jump or not preprocessed_edges:
-					walk.append(cur_nbrs[alias_draw(alias_nodes[cur][0], alias_nodes[cur][1])])
+					walk.append(cur_nbrs[alias_draw_original(alias_nodes[cur][0], alias_nodes[cur][1])])
 				else:
 					prev = walk[-2]
-					next_ = cur_nbrs[alias_draw(alias_edges[(prev, cur)][0], 
+					next_ = cur_nbrs[alias_draw_original(alias_edges[(prev, cur)][0], 
 						alias_edges[(prev, cur)][1])]
 					walk.append(next_)
 				jump = False
@@ -296,7 +292,7 @@ class Graph():
 		norm_const = sum(unnormalized_probs) + 1e-7
 		normalized_probs =  [float(u_prob)/norm_const for u_prob in unnormalized_probs]
 
-		return node, alias_setup(normalized_probs)
+		return node, alias_setup_original(normalized_probs)
 
 	def get_alias_edge(self, edge):
 		'''
@@ -319,7 +315,7 @@ class Graph():
 		norm_const = sum(unnormalized_probs) + 1e-7
 		normalized_probs =  [float(u_prob)/norm_const for u_prob in unnormalized_probs]
 
-		return edge, alias_setup(normalized_probs)
+		return edge, alias_setup_original(normalized_probs)
 
 
 	def preprocess_transition_probs(self):
@@ -358,35 +354,35 @@ class Graph():
 			alias_edges = None
 		self.alias_edges = alias_edges
 
+def save_walks_to_file(walks, walk_file):
+	with open(walk_file, "w") as f:
+		for walk in walks:
+			f.write(",".join([str(n) for n in walk]) + "\n")
+
+def load_walks_from_file(walk_file, ):
+
+	walks = []
+
+	with open(walk_file, "r") as f:
+		for line in (line.rstrip() for line in f.readlines()):
+			walks.append([int(n) for n in line.split(",")])
+	return walks
+
+def make_feature_sim(features):
+
+	if features is not None:
+		feature_sim = cosine_similarity(features)
+		np.fill_diagonal(feature_sim, 0) # remove diagonal
+		feature_sim[feature_sim < 1e-15] = 0
+		feature_sim /= np.maximum(
+			feature_sim.sum(axis=-1, keepdims=True), 1e-15) # row normalize
+	else:
+		feature_sim = None
+
+	return feature_sim
+
 
 def perform_walks(graph, features, args):
-
-	def save_walks_to_file(walks, walk_file):
-		with open(walk_file, "w") as f:
-			for walk in walks:
-				f.write(",".join([str(n) for n in walk]) + "\n")
-
-	def load_walks_from_file(walk_file, ):
-
-		walks = []
-
-		with open(walk_file, "r") as f:
-			for line in (line.rstrip() for line in f.readlines()):
-				walks.append([int(n) for n in line.split(",")])
-		return walks
-
-	def make_feature_sim(features):
-
-		if features is not None:
-			feature_sim = cosine_similarity(features)
-			np.fill_diagonal(feature_sim, 0) # remove diagonal
-			feature_sim[feature_sim < 1e-15] = 0
-			feature_sim /= np.maximum(
-				feature_sim.sum(axis=-1, keepdims=True), 1e-15) # row normalize
-		else:
-			feature_sim = None
-
-		return feature_sim
 
 	walk_file = args.walk_filename
 
@@ -452,6 +448,38 @@ def alias_setup(probs):
 
 	return n, (J, q)
 
+def alias_setup_original(probs):
+	'''
+	Compute utility lists for non-uniform sampling from discrete distributions.
+	Refer to https://hips.seas.harvard.edu/blog/2013/03/03/the-alias-method-efficient-sampling-with-many-discrete-outcomes/
+	for details
+	'''
+	K = len(probs)
+	q = np.zeros(K)
+	J = np.zeros(K, dtype=np.int)
+
+	smaller = []
+	larger = []
+	for kk, prob in enumerate(probs):
+		q[kk] = K*prob
+		if q[kk] < 1.0:
+			smaller.append(kk)
+		else:
+			larger.append(kk)
+
+	while len(smaller) > 0 and len(larger) > 0:
+		small = smaller.pop()
+		large = larger.pop()
+
+		J[small] = large
+		q[large] = q[large] + q[small] - 1.0
+		if q[large] < 1.0:
+			smaller.append(large)
+		else:
+			larger.append(large)
+
+	return J, q
+
 def alias_draw(J, q, size=1):
 	'''
 	Draw sample from a non-uniform discrete distribution using alias sampling.
@@ -464,3 +492,14 @@ def alias_draw(J, q, size=1):
 	kk[idx] = J[kk[idx]]
 	return kk
 
+def alias_draw_original(J, q):
+	'''
+	Draw sample from a non-uniform discrete distribution using alias sampling.
+	'''
+	K = len(J)
+
+	kk = int(np.floor(np.random.rand()*K))
+	if np.random.rand() < q[kk]:
+		return kk
+	else:
+		return J[kk]

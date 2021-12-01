@@ -110,6 +110,7 @@ venv.bak/
 # mypy
 .mypy_cache/
 
+bash
 
 datasets/mit
 datasets/ppi
@@ -128,6 +129,7 @@ jupyter_notebooks
 collated_results
 
 cleanup_embeddings.py
+collate_results.py
 
 *.zip
 
