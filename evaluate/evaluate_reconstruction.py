@@ -19,9 +19,10 @@ import argparse
 
 import pickle as pkl
 
-from evaluate.evaluation_utils import compute_scores, evaluate_rank_AUROC_AP, evaluate_mean_average_precision
+from evaluate.evaluation_utils import evaluate_rank_AUROC_AP, evaluate_mean_average_precision, load_embedding_for_evaluation
 
-from utils.io import load_data, load_embedding
+from utils.io import load_data
+
 from utils.sampling import sample_non_edges
 
 def parse_args():
@@ -47,7 +48,7 @@ def parse_args():
 	
 	parser.add_argument("--dist_fn", dest="dist_fn", type=str,
 		choices=["poincare", "hyperboloid", "euclidean", 
-			"kle", "klh", "st"])
+			"kle", "klh", "st", "poincare_hgcn"])
 
 	return parser.parse_args()
 
@@ -62,17 +63,17 @@ def main():
 	test_results_filename = os.path.join(test_results_dir, 
 		"{}.pkl".format(args.seed))
 
-	# if check_complete(test_results_filename, args.seed):
-	# 	return
-
-	# test_results_lock_filename = os.path.join(test_results_dir, 
-	# 	"test_results.lock")
-	# touch(test_results_lock_filename)
-
 	args.directed = True
 
-	graph, _, _ = load_data(args)
-	# assert nx.is_directed(graph)
+	graph_filename = args.graph
+	features_filename = args.features
+	labels_filename = args.labels
+
+	graph, _, _ = load_data(
+		graph_filename=graph_filename,
+		features_filename=features_filename,
+		labels_filename=labels_filename)
+
 	print ("Loaded dataset")
 	print ()
 
@@ -99,7 +100,8 @@ def main():
 	print ("number of test edges:", len(test_edges))
 	print ("number of test non edges:", len(test_non_edges))
 
-	embedding = load_embedding(args.dist_fn, 
+	embedding = load_embedding_for_evaluation(
+		args.dist_fn, 
 		args.embedding_directory)
 	
 	test_results = dict()

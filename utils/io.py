@@ -9,18 +9,19 @@ import networkx as nx
 from scipy.sparse import csr_matrix, load_npz
 
 
-def write_edgelist_to_file(edgelist, filename):
+def write_edgelist_to_file(edgelist, filename, delimiter="\t"):
 	# g = nx.DiGraph(edgelist)
 	# nx.write_edgelist(g, filename, delimiter="\t")
 	with open(filename, "w") as f:
 		for u, v in edgelist:
-			f.write("{}\t{}\n".format(u, v))
+			f.write("{}{}{}\n".format(u, delimiter, v))
 
-def load_data(args):
-
-	graph_filename = args.graph
-	features_filename = args.features
-	labels_filename = args.labels
+def load_data(
+	graph_filename,
+	features_filename,
+	labels_filename,
+	directed=True,
+	):
 
 	print ("loading graph from", graph_filename)
 
@@ -33,7 +34,7 @@ def load_data(args):
 		graph = nx.read_weighted_edgelist(graph_filename, 
 			delimiter="\t", nodetype=int,
 			create_using=nx.DiGraph() 
-				if args.directed else nx.Graph())
+				if directed else nx.Graph())
 
 		zero_weight_edges = [(u, v) for u, v, w in graph.edges(data="weight") if w == 0.]
 		print ("removing", len(zero_weight_edges), "edges with 0. weight")

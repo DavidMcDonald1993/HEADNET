@@ -126,7 +126,7 @@ test_results*
 edgelists
 nodes
 jupyter_notebooks
-collated_results
+collated_results*
 
 cleanup_embeddings.py
 collate_results.py
@@ -134,5 +134,7 @@ collate_results.py
 *.zip
 
 /*.png
+/*.pdf
+/*.odt
 
 instant-slurm.sh

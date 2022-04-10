@@ -3,12 +3,12 @@ import os
 import random
 import numpy as np
 import networkx as nx
-from scipy.sparse import csr_matrix, save_npz
+from scipy.sparse import save_npz
 
 import argparse
 
-from headnet.utils import load_data
-from remove_utils import sample_non_edges, write_edgelist_to_file
+from utils.io import load_data, write_edgelist_to_file
+from utils.sampling import sample_non_edges
 
 
 def split_edges(
@@ -126,7 +126,16 @@ def main():
 	test_non_edgelist_fn = os.path.join(removed_edges_dir, 
 		"test_non_edges.tsv")
 	
-	graph, _, _ = load_data(args)
+
+
+	graph_filename = args.graph
+	features_filename = args.features
+	labels_filename = args.labels
+
+	graph, _, _ = load_data(
+		graph_filename=graph_filename,
+		features_filename=features_filename,
+		labels_filename=labels_filename)
 	print("loaded dataset")
 
 	if isinstance(graph, nx.DiGraph):
@@ -139,12 +148,12 @@ def main():
 	print ("enumerated edges")
 	print ("number of edges", len(edges))
 
-	(_, (val_edges, val_non_edges), 
-	(test_edges, test_non_edges)) = split_edges(
+	(_, (val_edges, val_non_edges), (test_edges, test_non_edges)) = split_edges(
 		nodes, 
 		edges, 
 		seed, 
-		val_split=0)
+		val_split=0,
+		test_split=0.1)
 
 	print ("number of val edges", len(val_edges), 
 		"number of val non edges", len(val_edges))
@@ -156,8 +165,7 @@ def main():
 		graph[edge] = 0
 	graph.eliminate_zeros()
 
-	assert np.all(np.logical_or(graph.A.any(0).flatten(),
-		graph.A.any(1).flatten()))
+	assert np.all(np.logical_or(graph.A.any(0).flatten(), graph.A.any(1).flatten())) # check at least one connection
 	for u, v in val_edges:
 		assert not graph[u, v]
 	for u, v in test_edges:

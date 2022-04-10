@@ -20,7 +20,7 @@ import argparse
 import pickle as pkl
 
 from utils.io import load_data
-from evaluate.evaluation_utils import (load_embedding, evaluate_rank_AUROC_AP, evaluate_mean_average_precision, read_edgelist)
+from evaluate.evaluation_utils import (load_embedding_for_evaluation, evaluate_rank_AUROC_AP, evaluate_mean_average_precision, read_edgelist)
 
 
 def parse_args():
@@ -48,7 +48,7 @@ def parse_args():
 
 	parser.add_argument("--dist_fn", dest="dist_fn", type=str,
 		choices=["poincare", "hyperboloid", "euclidean", 
-		"kle", "klh", "st"])
+		"kle", "klh", "st", "poincare_hgcn"])
 
 	return parser.parse_args()
 
@@ -65,8 +65,15 @@ def main():
 
 	args.directed = True
 
-	graph, _, _ = load_data(args)
-	# assert nx.is_directed(graph)
+	graph_filename = args.graph
+	features_filename = args.features
+	labels_filename = args.labels
+
+	graph, _, _ = load_data(
+		graph_filename=graph_filename,
+		features_filename=features_filename,
+		labels_filename=labels_filename)
+
 	print ("Loaded dataset")
 	print ()
 
@@ -103,20 +110,23 @@ def main():
 	print ("number of test edges:", len(test_edges))
 	print ("number of test non edges:", len(test_non_edges))
 
-	embedding = load_embedding(args.dist_fn, args.embedding_directory)
+	embedding = load_embedding_for_evaluation(args.dist_fn, args.embedding_directory)
 
 	test_results = dict()
 
-	(mean_rank_lp, ap_lp, 
-		roc_lp) = evaluate_rank_AUROC_AP(
+	mean_rank_lp, ap_lp, roc_lp = evaluate_rank_AUROC_AP(
 			embedding,
 			test_edges, 
 			test_non_edges,
 			args.dist_fn)
 
-	test_results.update({"mean_rank_lp": mean_rank_lp, 
-		"ap_lp": ap_lp,
-		"roc_lp": roc_lp})
+	test_results.update(
+		{
+			"mean_rank_lp": mean_rank_lp, 
+			"ap_lp": ap_lp,
+			"roc_lp": roc_lp,
+		}
+	)
 
 	map_lp, precisions_at_k = evaluate_mean_average_precision(
 		embedding, 
@@ -125,12 +135,20 @@ def main():
 		graph_edges=graph_edges
 	)
 
-	test_results.update({"map_lp": map_lp})
+	test_results.update(
+		{"map_lp": map_lp}
+	)
 
+	# print p@k
 	for k, pk in precisions_at_k.items():
 		print ("precision at", k, pk)
-	test_results.update({"p@{}".format(k): pk
-		for k, pk in precisions_at_k.items()})
+	# update test_results_dict
+	test_results.update(
+		{
+			"p@{}".format(k): pk
+			for k, pk in precisions_at_k.items()
+		}
+	)
 
 	print ("saving test results to {}".format(test_results_filename))
 

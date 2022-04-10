@@ -7,7 +7,7 @@ from keras import regularizers
 
 from tensorflow.train import AdamOptimizer
 
-from headnet.losses import asymmetric_hyperbolic_loss
+from headnet.losses import negative_sampling_softmax_loss
 from headnet.hyperboloid_layers import logarithmic_map, parallel_transport, exp_map_0
 
 reg = 0e-4
@@ -35,23 +35,28 @@ def map_to_tangent_space_mu_zero(mus):
 
 	return to_tangent_space_mu_zero
 	
-def kullback_leibler_divergence(args):
+def kullback_leibler_divergence_hyperboloid(args):
 
 	mus, sigmas = args
 
 	assert len(mus.shape) == len(sigmas.shape) == 4
 
+	# embedding dimension
 	k = K.int_shape(mus)[-1]
 
-	sigmas = K.maximum(sigmas, K.epsilon())
+	sigmas = K.maximum(sigmas, K.epsilon()) # ensure sigma > 0
 
 	source_sigma = sigmas[:,:,:1]
 	target_sigma = sigmas[:,:,1:]
 
 	sigma_ratio = target_sigma / source_sigma
-	sigma_ratio = K.maximum(sigma_ratio, K.epsilon())
+	sigma_ratio = K.maximum(sigma_ratio, K.epsilon()) # clip to avoid inf
 
 	trace_fac = K.sum(sigma_ratio,
+		axis=-1, 
+		keepdims=True)
+
+	log_det = K.sum(K.log(sigma_ratio), 
 		axis=-1, 
 		keepdims=True)
 
@@ -60,9 +65,6 @@ def kullback_leibler_divergence(args):
 		axis=-1, 
 		keepdims=True) # assume sigma inv is diagonal
 
-	log_det = K.sum(K.log(sigma_ratio), 
-		axis=-1, 
-		keepdims=True)
 
 	kld = 0.5 * (trace_fac + 
 		mu_sq_diff - k - log_det)
@@ -70,13 +72,63 @@ def kullback_leibler_divergence(args):
 	kld = K.squeeze(kld, axis=-1)
 	return K.squeeze(kld, axis=-1)
 
+def kullback_leibler_divergence_euclidean(args):
+
+	mus, sigmas = args
+
+	assert len(mus.shape) == len(sigmas.shape) == 4
+
+	# embedding dimension
+	k = K.int_shape(mus)[-1]
+
+	# split up source and target mus for euclidean
+	source_mu = mus[:,:,:1]
+	target_mu = mus[:,:,1:]
+
+	sigmas = K.maximum(sigmas, K.epsilon()) # ensure sigma > 0
+
+	source_sigma = sigmas[:,:,:1]
+	target_sigma = sigmas[:,:,1:]
+
+	sigma_ratio = target_sigma / source_sigma
+	sigma_ratio = K.maximum(sigma_ratio, K.epsilon()) # clip to avoid inf
+
+	trace_fac = K.sum(sigma_ratio,
+		axis=-1, 
+		keepdims=True)
+
+	log_det = K.sum(K.log(sigma_ratio), # sigma ratio is already clipped
+		axis=-1, 
+		keepdims=True)
+
+	mu_sq_diff = K.sum(K.square(source_mu - target_mu) / \
+		source_sigma,
+		axis=-1, 
+		keepdims=True) # assume sigma inv is diagonal
+	
+
+	kld = 0.5 * (trace_fac + 
+		mu_sq_diff - k - log_det)
+
+	kld = K.squeeze(kld, axis=-1)
+	return K.squeeze(kld, axis=-1)
+
+
+
 def build_headnet(
 	N,
 	features, 
 	embedding_dim, 
 	num_negative_samples, 
 	num_hidden=128,
-	identity_variance=False):
+	identity_variance=False,
+	euclidean_distance=False,
+	):
+
+	if euclidean_distance:
+		kld_function = kullback_leibler_divergence_euclidean
+	else:
+		kld_function = kullback_leibler_divergence_hyperboloid
 
 	if features is not None: # HEADNet with attributes
 
@@ -87,7 +139,6 @@ def build_headnet(
 
 		input_transform = Dense(
 			num_hidden,
-			# kernel_initializer=initializer,
 			kernel_regularizer=regularizers.l2(reg),
 			bias_regularizer=regularizers.l2(reg),
 			name="euclidean_transform",
@@ -105,19 +156,21 @@ def build_headnet(
 	
 	input_transform = Activation("relu")(input_transform)
 
-	hyperboloid_embedding_layer = Dense(
+	mu_embedding_layer = Dense(
 		embedding_dim, 
-		# kernel_initializer=initializer,
 		kernel_regularizer=regularizers.l2(reg),
 		bias_regularizer=regularizers.l2(reg),
-		name="dense_to_hyperboloid",
+		name="dense_to_mu",
 	)(input_transform)
 
-	to_hyperboloid = Lambda(
-		exp_map_0,
-		name="to_hyperboloid"
-	)(hyperboloid_embedding_layer)
+	# apply exp_map_0 if loss function is hyperbolic
+	if not euclidean_distance:
+		mu_embedding_layer = Lambda(
+			exp_map_0,
+			name="to_hyperboloid"
+		)(mu_embedding_layer)
 
+	# define hidden -> sigma layer
 	sigma_layer = Dense(
 		embedding_dim, 
 		activation=lambda x: K.elu(x) + 1.,
@@ -127,14 +180,17 @@ def build_headnet(
 		name="dense_to_sigma",
 		trainable=not identity_variance,
 	)(input_transform)
-	if  identity_variance:
+	if  identity_variance: # stop gradient passing throgh variance matrix
 		sigma_layer = Lambda(K.stop_gradient,
 			name="variance_stop_gradient")(sigma_layer)
 
-	embedder_model = Model(input_layer, 
-		[to_hyperboloid, sigma_layer],
+	# define embedder (input -> (mu, sigma))
+	embedder_model = Model(
+		input_layer, 
+		[mu_embedding_layer, sigma_layer],
 		name="embedder_model")
 
+	 # begin definition of trainable model
 	if features is not None:
 
 		trainable_input = Input(
@@ -146,16 +202,23 @@ def build_headnet(
 			(1 + num_negative_samples, 2, ),
 			name="trainable_input_non_attributed")
 
+	# apply previously defined embedder model to map to mu, sigma
 	mus, sigmas = embedder_model(trainable_input)
 
 	assert len(mus.shape) == len(sigmas.shape) == 4
 
-	mus = Lambda(map_to_tangent_space_mu_zero,
-		name="to_tangent_space_mu_zero")(mus)
+	# map to tangent space of mu_0 if using hyperbolic distance
+	if not euclidean_distance:
+		mus = Lambda(
+			map_to_tangent_space_mu_zero,
+			name="to_tangent_space_mu_zero")(mus)
+		# shape is now (batch_size, 1 + num_negative_samples, 1, embedding dim)
 
-	kds = Lambda(kullback_leibler_divergence,
+	kds = Lambda(
+		kld_function,
 		name="kullback_leibler_layer")([mus, sigmas])
 
+	# finally, define entire trainable model
 	trainable_model = Model(
 		trainable_input,
 		kds,
@@ -165,8 +228,7 @@ def build_headnet(
 
 	trainable_model.compile(
 		optimizer=optimizer, 
-		loss=asymmetric_hyperbolic_loss,
-		target_tensors=[ tf.placeholder(dtype=tf.int64, 
-			shape=(None, 1)),])
+		loss=negative_sampling_softmax_loss,
+		target_tensors=[ tf.placeholder(dtype=tf.int64, shape=(None, 1)),])
 
 	return embedder_model, trainable_model

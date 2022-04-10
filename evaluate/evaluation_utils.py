@@ -13,8 +13,7 @@ import random
 
 import types
 
-from sklearn.metrics import average_precision_score, roc_auc_score, roc_curve
-
+from sklearn.metrics import average_precision_score, roc_auc_score#, roc_curve
 
 def euclidean_distance(u, v):
 	return np.linalg.norm(u - v, axis=-1)
@@ -30,14 +29,16 @@ def hyperbolic_distance_hyperboloid(u, v):
 
 def hyperbolic_distance_poincare(u, v):
 	assert len(u.shape) == len(v.shape)
-	norm_u = np.linalg.norm(u, keepdims=False, axis=-1)
-	norm_u = np.minimum(norm_u, np.nextafter(1,0, ))
-	norm_v = np.linalg.norm(v, keepdims=False, axis=-1)
-	norm_v = np.minimum(norm_v, np.nextafter(1,0, ))
+	norm_u_sq = np.linalg.norm(u, keepdims=False, axis=-1) ** 2
+	# norm_u_sq = np.minimum(norm_u_sq, np.nextafter(1,0, ))
+	norm_u_sq = np.minimum(norm_u_sq, 1-1e-1)
+	norm_v_sq = np.linalg.norm(v, keepdims=False, axis=-1)
+	# norm_v_sq = np.minimum(norm_v_sq, np.nextafter(1,0, ))
+	norm_v_sq = np.minimum(norm_v_sq, 1-1e-7)
 	uu = np.linalg.norm(u - v, keepdims=False, axis=-1, ) ** 2
-	dd = (1 - norm_u**2) * (1 - norm_v**2)
-	return np.arccosh(1 + 2 * uu / dd)
+	dd = (1 - norm_u_sq) * (1 - norm_v_sq)
 
+	return np.arccosh(1 + 2 * uu / dd + 1e-7)
 
 def logarithmic_map(p, x):
 
@@ -149,6 +150,11 @@ def load_poincare(embedding_directory):
 
 	return embedding
 
+def load_poincare_hgcn(embedding_directory):
+	files = sorted(glob.iglob(os.path.join(embedding_directory, "*.npy")))
+	embedding_filename = files[-1]
+	return np.load(embedding_filename)
+
 def load_euclidean(embedding_directory):
 	files = sorted(glob.iglob(os.path.join(embedding_directory, 
 		"*.csv.gz")))
@@ -168,13 +174,28 @@ def load_klh(embedding_directory):
 	return embedding, variance
 
 def load_kle(embedding_directory):
-	embedding_filename = os.path.join(embedding_directory, 
-			"mu.csv.gz")
-	variance_filename = os.path.join(embedding_directory,
-		"sigma.csv.gz")
 
+	embedding_filename = os.path.join(
+		embedding_directory, 
+		"mu.csv.gz")
+	if not os.path.exists(embedding_filename):
+		# HEADNET euclidean
+		embedding_filename = os.path.join(
+			embedding_directory, 
+			"final_embedding.csv.gz")
+	
+	variance_filename = os.path.join(
+		embedding_directory,
+		"sigma.csv.gz")
+	if not os.path.exists(variance_filename):
+		# HEADNET euclidean
+		variance_filename = os.path.join(
+			embedding_directory,
+			"final_variance.csv.gz",
+		)
 	embedding = load_file(embedding_filename)
 	variance = load_file(variance_filename)
+
 
 	return embedding, variance
 
@@ -188,7 +209,11 @@ def load_st(embedding_directory):
 	target = load_file(target_filename)
 	return source, target
 
-def load_embedding(dist_fn, embedding_directory):
+def load_embedding_for_evaluation(
+	dist_fn, 
+	embedding_directory,
+	):
+	print ("loading embedding from", embedding_directory)
 
 	if dist_fn == "hyperboloid":
 		embedding = load_hyperboloid(embedding_directory)
@@ -196,6 +221,9 @@ def load_embedding(dist_fn, embedding_directory):
 	elif dist_fn == "poincare":
 		embedding = load_poincare(embedding_directory)
 		return embedding
+	elif dist_fn == "poincare_hgcn":
+		embedding = load_poincare_hgcn(embedding_directory)
+		return embedding 
 	elif dist_fn == "euclidean":
 		embedding = load_euclidean(embedding_directory)
 		return embedding
@@ -218,7 +246,7 @@ def compute_scores(U, V, dist_fn):
 		scores = -np.concatenate([
 			hyperbolic_distance_hyperboloid(u, v)
 			for u, v in zip(U, V)])
-	elif dist_fn == "poincare":
+	elif dist_fn in {"poincare", "poincare_hgcn"}:
 		scores = -np.concatenate([
 			hyperbolic_distance_poincare(u, v)
 			for u, v in zip(U, V)])
@@ -389,6 +417,7 @@ def get_scores(embedding,
 	num_chunks = int(np.ceil(edges.shape[0]  / chunk_size))
 
 	if dist_fn in ("kle", "klh"):
+		# split embedding into means and variances
 		means, variances = embedding
 
 		embedding_u = (

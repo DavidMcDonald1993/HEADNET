@@ -39,7 +39,7 @@ from utils.hyperbolic_functions import (
 	poincare_ball_to_klein,
 	)
 from utils.io import load_data
-from evaluate.evaluation_utils import load_embedding
+from evaluate.evaluation_utils import load_embedding_for_evaluation
 
 def compute_measures( 
     labels, 
@@ -61,13 +61,18 @@ def compute_measures(
 def evaluate_kfold_label_classification(
 	embedding, 
 	labels, 
-	k=10):
+	k=10,
+	model="SVC",
+	):
 	assert len(labels.shape) == 2
+	print (f"Evaluatung {k}-fold cross validation")
 	
-	# model = LogisticRegressionCV(
-	# 	max_iter=1000, 
-	# 	n_jobs=-1)
-	model = SVC(probability=True)
+	print (f"using classifier: {model}")
+	if model == "SVC":
+		model = SVC(probability=True)
+	else:
+		raise NotImplementedError
+
 
 	if labels.shape[1] == 1:
 		print ("single label clasification")
@@ -112,6 +117,7 @@ def evaluate_node_classification_with_label_fraction(
 	labels,
 	label_fractions=np.arange(0.02, 0.11, 0.01), 
 	n_repeats=30,
+	model="SVC",
 	):
 
 	print ("Evaluating node classification")
@@ -119,10 +125,12 @@ def evaluate_node_classification_with_label_fraction(
 	f1_micros = np.zeros((n_repeats, len(label_fractions)))
 	f1_macros = np.zeros((n_repeats, len(label_fractions)))
 	
-	# model = LogisticRegressionCV(max_iter=1000,
-	# 	n_jobs=-1)
-	model = SVC(probability=True)
-	print ("USING SVC")
+	print (f"using classifier: {model}")
+	if model == "SVC":
+		model = SVC(probability=True)
+	else:
+		raise NotImplementedError
+
 
 	if labels.shape[1] == 1:
 		print ("single label clasification")
@@ -132,13 +140,12 @@ def evaluate_node_classification_with_label_fraction(
 		for seed in range(n_repeats):
 		
 			for i, label_percentage in enumerate(label_fractions):
-				print ("processing label percentage", i, 
-					":", "{:.02f}".format(label_percentage))
-				sss = split(n_splits=1, 
+				print ("processing label percentage", i, f": {label_percentage:.02f}")
+				sss = split(
+					n_splits=1, 
 					test_size=1-label_percentage, 
 					random_state=seed)
-				split_train, split_test = next(sss.split(embedding, 
-					labels))
+				split_train, split_test = next(sss.split(embedding, labels))
 				
 				model.fit(embedding[split_train], labels[split_train])
 				predictions = model.predict(embedding[split_test])
@@ -147,12 +154,11 @@ def evaluate_node_classification_with_label_fraction(
 					average="micro")
 				f1_macro = f1_score(labels[split_test], predictions, 
 					average="macro")
-				print ("{:.02f}".format(label_percentage), 
-					f1_micro, f1_macro)
+				# print (f"label_percentage {label_percentage:.02f}", "F1 micro", f1_micro, "F1 macro", f1_macro)
 
 				f1_micros[seed, i] = f1_micro
 				f1_macros[seed, i] = f1_macro
-			print ("completed repeat {}".format(seed+1))
+			print (f"completed repeat {seed+1}")
 
 	else: # multilabel classification
 		print ("multilabel classification")
@@ -162,8 +168,7 @@ def evaluate_node_classification_with_label_fraction(
 		for seed in range(n_repeats):
 		
 			for i, label_percentage in enumerate(label_fractions):
-				print ("processing label percentage", i, 
-					":", "{:.02f}".format(label_percentage))
+				print ("processing label percentage", i, f": {label_percentage:.02f}")
 				sss = split(n_splits=2, order=1, #random_state=seed,
 					sample_distribution_per_fold=[1.0-label_percentage, label_percentage])
 				split_train, split_test = next(sss.split(embedding, labels))
@@ -175,7 +180,7 @@ def evaluate_node_classification_with_label_fraction(
 					average="macro")
 				f1_micros[seed,i] = f1_micro
 				f1_macros[seed,i] = f1_macro
-			print ("completed repeat {}".format(seed+1))
+			print (f"completed repeat {seed+1}")
 
 	return label_fractions, f1_micros.mean(axis=0), f1_macros.mean(axis=0)
 
@@ -201,7 +206,7 @@ def parse_args():
 	parser.add_argument("--seed", type=int, default=0)
 
 	parser.add_argument("--dist_fn", dest="dist_fn", type=str,
-		choices=["poincare", "hyperboloid", "euclidean", "kle", "klh"])
+		choices=["poincare", "hyperboloid", "euclidean", "kle", "klh", "poincare_hgcn"])
 
 	return parser.parse_args()
 
@@ -213,17 +218,37 @@ def main():
 	if not os.path.exists(test_results_dir):
 		os.makedirs(test_results_dir, exist_ok=True)
 	
-	test_results_filename = os.path.join(test_results_dir, 
-		"{}.pkl".format(args.seed))
+	test_results_filename = os.path.join(
+		test_results_dir, 
+		f"{args.seed}.pkl")
+
+	# print results if they exist and terminate
 	if os.path.exists(test_results_filename):
 		print (f"{test_results_filename} ALREADY EXISTS")
+		with open(test_results_filename, "rb") as f:
+			test_results = pkl.load(f)
+
+		for k, v in test_results.items():
+			if "macro" in k:
+				continue # skip macro-average
+			print (k, v)
 		return 
 
 
-	_, _, node_labels = load_data(args)
+	graph_filename = args.graph
+	features_filename = args.features
+	labels_filename = args.labels
+
+	_, _, node_labels = load_data(
+		graph_filename=graph_filename,
+		features_filename=features_filename,
+		labels_filename=labels_filename)
+
 	print ("Loaded dataset")
 
-	embedding = load_embedding(args.dist_fn, args.embedding_directory)
+	embedding = load_embedding_for_evaluation(
+		dist_fn=args.dist_fn, 
+		embedding_directory=args.embedding_directory)
 	if isinstance(embedding, tuple):
 		embedding, variance = embedding
 
@@ -258,14 +283,17 @@ def main():
 	test_results = {}
 	
 	label_percentages, f1_micros, f1_macros = \
-		evaluate_node_classification_with_label_fraction(embedding, node_labels)
+		evaluate_node_classification_with_label_fraction(
+			embedding=embedding, 
+			labels=node_labels,
+			n_repeats=5)
 
 	for label_percentage, f1_micro, f1_macro in zip(label_percentages, f1_micros, f1_macros):
 		print ("{:.2f}".format(label_percentage), 
-			"micro = {:.2f}".format(f1_micro), 
-			"macro = {:.2f}".format(f1_macro) )
-		test_results.update({"{:.2f}_micro".format(label_percentage): f1_micro})
-		test_results.update({"{:.2f}_macro".format(label_percentage): f1_macro})
+			"micro = {:.5f}".format(f1_micro), 
+			"macro = {:.5f}".format(f1_macro) )
+		test_results.update({"{:.5f}_micro".format(label_percentage): f1_micro})
+		test_results.update({"{:.5f}_macro".format(label_percentage): f1_macro})
 	
 
 
@@ -273,14 +301,18 @@ def main():
 	k_fold_roc, k_fold_f1, k_fold_precision, k_fold_recall = \
 		evaluate_kfold_label_classification(embedding, node_labels, k=k)
 
-	test_results.update({
-		"{}-fold-roc".format(k): k_fold_roc, 
-		"{}-fold-f1".format(k): k_fold_f1,
-		"{}-fold-precision".format(k): k_fold_precision,
-		"{}-fold-recall".format(k): k_fold_recall,
-		})
+	test_results.update(
+		{
+		f"{k}-fold-roc": k_fold_roc, 
+		f"{k}-fold-f1": k_fold_f1,
+		f"{k}-fold-precision": k_fold_precision,
+		f"{k}-fold-recall": k_fold_recall,
+		}
+	)
 
-	print ("saving test results to {}".format(test_results_filename))
+	print (k, "-fold F1:", k_fold_f1)
+
+	print (f"saving test results to {test_results_filename}")
 
 	test_results = pd.Series(test_results)
 	with open(test_results_filename, "wb") as f:

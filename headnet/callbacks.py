@@ -5,7 +5,7 @@ import os
 
 from keras.callbacks import Callback
 
-class Checkpointer(Callback):
+class HEADNetCheckpointer(Callback):
 
 	def __init__(self, 
 		epoch,

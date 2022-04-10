@@ -9,7 +9,8 @@ def make_dir(dir):
 
 def main():
 
-    results_dir = os.path.join("collated_results", 
+    results_dir = os.path.join(
+        "collated_results", 
         "recon_experiment")
     assert os.path.exists(results_dir)
 

@@ -1,7 +1,5 @@
-from __future__ import print_function
-
 import os
-os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
+# os.environ["HDF5_USE_FILE_LOCKING"] = "FALSE"
 
 import argparse
 import random
@@ -17,8 +15,22 @@ from keras.callbacks import ModelCheckpoint, TerminateOnNaN, EarlyStopping
 
 import tensorflow as tf
 
+# configuration = tf.compat.v1.ConfigProto()
+# configuration.gpu_options.allow_growth = True
+# session = tf.compat.v1.Session(config=configuration)
+
+
+import keras.backend.tensorflow_backend as KTF
+import tensorflow as tf
+config = tf.ConfigProto()
+config.gpu_options.allow_growth=True   
+sess = tf.Session(config=config)
+
+KTF.set_session(sess)
+
+
 from headnet.generators import TrainingDataGenerator
-from headnet.callbacks import Checkpointer
+from headnet.callbacks import HEADNetCheckpointer
 from headnet.models import build_headnet
 
 from utils.io import load_data, load_weights
@@ -49,8 +61,8 @@ def parse_args():
 		help="Batch size for training (default is 512).")
 	parser.add_argument("--nneg", dest="num_negative_samples", type=int, default=10, 
 		help="Number of negative samples for training (default is 10).")
-	parser.add_argument("--patience", dest="patience", type=int, default=25,
-		help="The number of epochs of no improvement in loss before training is stopped. (Default is 25)")
+	parser.add_argument("--patience", dest="patience", type=int, default=5,
+		help="The number of epochs of no improvement in loss before training is stopped. (Default is 5)")
 
 	parser.add_argument("-d", "--dim", dest="embedding_dim", type=int,
 		help="Dimension of embeddings for each layer (default is 10).", default=10)
@@ -69,6 +81,9 @@ def parse_args():
 	parser.add_argument("--identity_variance", action="store_true",
 		help="flag to fix the variance matrix to the identity matrix.")
 
+	parser.add_argument("--euclidean_distance", action="store_true",
+		help="flag to use euclidean distance in model building and training.")
+
 	args = parser.parse_args()
 	return args
 
@@ -76,10 +91,8 @@ def configure_paths(args):
 	'''
 	build directories on local system for output of model after each epoch
 	'''
-	if not os.path.exists(args.embedding_path):
-		os.makedirs(args.embedding_path)
-		print ("making {}".format(args.embedding_path))
-	print ("saving embedding to {}".format(args.embedding_path))
+	os.makedirs(args.embedding_path, exist_ok=True)
+	print (f"saving embedding to {args.embedding_path}")
 
 def main():
 
@@ -90,12 +103,25 @@ def main():
 	assert not (args.visualise and args.embedding_dim > 2), "Can only visualise two dimensions"
 	assert args.embedding_path is not None, "you must specify a path to save embedding"
 
+	if args.identity_variance:
+		print ("using fixed identity variance")
+
+	if args.euclidean_distance:
+		print ("using euclidean distance")
+
 	random.seed(args.seed)
 	np.random.seed(args.seed)
 	tf.set_random_seed(args.seed)
 
-	graph, features, node_labels = \
-		load_data(args)
+
+	graph_filename = args.graph
+	features_filename = args.features
+	labels_filename = args.labels
+
+	graph, features, node_labels = load_data(
+		graph_filename=graph_filename,
+		features_filename=features_filename,
+		labels_filename=labels_filename)
 	if not args.visualise and node_labels is not None:
 		node_labels = None
 	print ("Loaded dataset")
@@ -120,35 +146,41 @@ def main():
 		args.embedding_dim, 
 		args.num_negative_samples, 
 		identity_variance=args.identity_variance,
+		euclidean_distance=args.euclidean_distance,
 		)
 	model, initial_epoch = load_weights(
 		model, 
 		args.embedding_path)
 
+	# print Keras summary to console
 	model.summary()
 
-	best_model_path = os.path.join(args.embedding_path, 
+	best_model_path = os.path.join(
+		args.embedding_path, 
 		"best_model.h5")
 
 	callbacks = [
 		TerminateOnNaN(),
-		EarlyStopping(monitor="loss", 
+		EarlyStopping(
+			monitor="loss", 
 			patience=args.patience, 
 			mode="min",
 			verbose=True),
-		ModelCheckpoint(best_model_path,
+		ModelCheckpoint(
+			best_model_path,
 			save_best_only=True,
 			save_weights_only=True,
 			monitor="loss",
 			mode="min"),
-		Checkpointer(epoch=initial_epoch, 
+		HEADNetCheckpointer(
+			epoch=initial_epoch, 
 			embedding_directory=args.embedding_path,
 			model=model,
 			embedder=embedder,
 			features=features if features is not None else np.arange(N),)#.reshape(N, 1),)
 	]			
 
-	print ("Training with data generator with {} worker threads".format(args.workers))
+	print (f"Training with data generator with {args.workers} worker threads")
 	training_generator = TrainingDataGenerator(
 		features,
 		positive_samples,  
@@ -157,10 +189,12 @@ def main():
 		args,
 	)
 
+	print ("Beginning model training")
+
 	model.fit_generator(
 		training_generator, 
 		workers=args.workers,
-		use_multiprocessing=True,
+		use_multiprocessing=False,
 		steps_per_epoch=len(training_generator),
 		epochs=args.num_epochs, 
 		initial_epoch=initial_epoch, 
