@@ -20,7 +20,7 @@ import argparse
 import pickle as pkl
 
 from utils.io import load_data
-from evaluate.evaluation_utils import (load_embedding_for_evaluation, evaluate_rank_AUROC_AP, evaluate_mean_average_precision, read_edgelist)
+from evaluate.evaluation_utils import (load_embedding_for_evaluation, evaluate_rank_AUROC_AP, evaluate_mean_average_precision_and_p_at_k, read_edgelist)
 
 
 def parse_args():
@@ -128,11 +128,11 @@ def main():
 		}
 	)
 
-	map_lp, precisions_at_k = evaluate_mean_average_precision(
+	map_lp, precisions_at_k = evaluate_mean_average_precision_and_p_at_k(
 		embedding, 
 		test_edges,
 		args.dist_fn, 
-		graph_edges=graph_edges
+		edges_to_skip=graph_edges
 	)
 
 	test_results.update(

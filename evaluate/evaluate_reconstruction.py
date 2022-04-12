@@ -19,7 +19,7 @@ import argparse
 
 import pickle as pkl
 
-from evaluate.evaluation_utils import evaluate_rank_AUROC_AP, evaluate_mean_average_precision, load_embedding_for_evaluation
+from evaluate.evaluation_utils import evaluate_rank_AUROC_AP, evaluate_mean_average_precision_and_p_at_k, load_embedding_for_evaluation
 
 from utils.io import load_data
 
@@ -119,7 +119,7 @@ def main():
 		"roc_recon": roc_recon})
 
 	map_recon, precisions_at_k = \
-		evaluate_mean_average_precision(
+		evaluate_mean_average_precision_and_p_at_k(
 		embedding, 
 		test_edges,
 		args.dist_fn)

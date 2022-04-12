@@ -268,12 +268,12 @@ def compute_scores(U, V, dist_fn):
 
 	return scores
 
-def evaluate_mean_average_precision(
+def evaluate_mean_average_precision_and_p_at_k(
 	embedding, 
 	edgelist, 
 	dist_fn,
-	graph_edges=None,
-	ks=(1,3,5,10),
+	edges_to_skip=None,
+	ks=(1,3,5,10), # p@k ks
 	max_non_neighbours=1000,
 	chunk_size=10000,
 	):
@@ -286,39 +286,49 @@ def evaluate_mean_average_precision(
 
 	all_nodes = set(range(N))
 
+	# convert list of edge tuples to dictinoary
 	edgelist_dict = {}
 	for u, v in edgelist:
 		if u not in edgelist_dict:
-			edgelist_dict.update({u: set()})
+			edgelist_dict[u] = set()
 		edgelist_dict[u].add(v)
 
 
-	if graph_edges:
+	# optional set of edges to skip in evaluation (i.e. the training edges in link prediction)
+	if edges_to_skip:
 		graph_edgelist_dict = {}
-		for u, v in graph_edges:
+		for u, v in edges_to_skip:
 			if u not in graph_edgelist_dict:
-				graph_edgelist_dict.update({u: set()})
+				graph_edgelist_dict[u] = set()
 			if u in edgelist_dict and v not in edgelist_dict[u]:
 				graph_edgelist_dict[u].add(v)
 
-	precisions = []
-	pks = {k: [] for k in ks}
+	all_node_average_precision_scores = []
+	precisions_at_k = {
+		k: [] 
+		for k in ks
+	}
+
 	for i, u in enumerate(edgelist_dict):
 
-		true_neighbours = edgelist_dict[u]
-		non_neighbours = all_nodes - {u} - true_neighbours
-		if graph_edges and u in graph_edgelist_dict:
-			non_neighbours -= graph_edgelist_dict[u]
+		node_true_neighbours = edgelist_dict[u]
+		# get all non-neighbours for node u
+		node_non_neighbours = all_nodes - {u} - node_true_neighbours
+		# remove optional edges
+		if edges_to_skip and u in graph_edgelist_dict:
+			node_non_neighbours -= graph_edgelist_dict[u]
 		
-		true_neighbours = list(true_neighbours)
-		non_neighbours = list(non_neighbours)
+		node_true_neighbours = list(node_true_neighbours)
+		node_non_neighbours = list(node_non_neighbours)
 
-		if len(non_neighbours) > max_non_neighbours:
-			non_neighbours = random.sample(non_neighbours, 
+		# take random sample of non-neighours
+		if len(node_non_neighbours) > max_non_neighbours:
+			node_non_neighbours = random.sample(
+				node_non_neighbours, 
 				k=max_non_neighbours,)
 
-		neighbours = true_neighbours + non_neighbours
-		num_chunks = int(np.ceil(len(neighbours) / chunk_size))
+		all_node_neighbours = node_true_neighbours + node_non_neighbours
+		num_chunks = int(np.ceil(len(all_node_neighbours) / chunk_size))
 
 		if isinstance(embedding, tuple):
 			if dist_fn in ("klh", "kle"):
@@ -326,50 +336,66 @@ def evaluate_mean_average_precision(
 				scores = compute_scores(
 					((means[u:u+1], variances[u:u+1]) 
 						for _ in range(num_chunks)),
-					((means[neighbours[j*chunk_size:(j+1)*chunk_size]], 
-						variances[neighbours[j*chunk_size:(j+1)*chunk_size]]) 
-						for j in range(num_chunks)),
+					((means[all_node_neighbours[chunk_num*chunk_size:(chunk_num+1)*chunk_size]], 
+						variances[all_node_neighbours[chunk_num*chunk_size:(chunk_num+1)*chunk_size]]) 
+						for chunk_num in range(num_chunks)),
 					dist_fn)
 			else:
 				assert dist_fn == "st"
 				source, target = embedding
 				scores = compute_scores(
 					(source[u:u+1] for _ in range(num_chunks)),
-					(target[neighbours[j*chunk_size:(j+1)*chunk_size]]
-						for j in range(num_chunks)),
+					(target[all_node_neighbours[chunk_num*chunk_size:(chunk_num+1)*chunk_size]]
+						for chunk_num in range(num_chunks)),
 					dist_fn)
 		else:
 			scores = compute_scores(
 				(embedding[u:u+1] for _ in range(num_chunks)), 
-				(embedding[neighbours[j*chunk_size:(j+1)*chunk_size]]
-					for j in range(num_chunks)),
+				(embedding[all_node_neighbours[chunk_num*chunk_size:(chunk_num+1)*chunk_size]]
+					for chunk_num in range(num_chunks)),
 				dist_fn)
 		assert len(scores.shape) == 1
 
-		labels = np.append(np.ones_like(true_neighbours),
-			np.zeros_like(non_neighbours))
+		# initialise labels
+		# true neighbours are listed first
+		labels = np.append(
+			np.ones_like(node_true_neighbours),
+			np.zeros_like(node_non_neighbours),
+		)
 		
-		s = average_precision_score(labels, scores)
-		precisions.append(s)
+		node_average_precision_score = average_precision_score(labels, scores)
+		all_node_average_precision_scores.append(node_average_precision_score)
 
+		# smallest score to largest
 		nodes_sorted = scores.argsort()
 
+		# convert true neighbours list to set for efficient `in` operation
+		# since order of true_neighbours is not important now
+		node_true_neighbours = set(node_true_neighbours)
+
+		# compute p@k for all k
 		for k in ks:
-			nodes_sorted_ = nodes_sorted[-k:]
-			s = np.mean([neighbours[u] in true_neighbours 
-				for u in nodes_sorted_])
-			pks[k].append(s)
+			top_k_nodes = nodes_sorted[-k:]
+			# mean of top_k_nodes in true_neighbours
+			node_precision_score_k = np.mean(
+				[all_node_neighbours[u] in node_true_neighbours 
+				for u in top_k_nodes]
+			)
+			# add precision score for current k to precisions_at_k dict
+			precisions_at_k[k].append(node_precision_score_k)
 
 		if i % 1000 == 0:
 			print ("completed", i, "/", len(edgelist_dict))
 
-	mAP = np.mean(precisions)
+	mAP = np.mean(all_node_average_precision_scores)
 	print ("MAP", mAP)
 
-	pks = {k: (np.mean(v) if len(v) > 0 else 0)
-			for k, v in pks.items()}
+	precisions_at_k = {
+		k: (np.mean(v) if len(v) > 0 else 0)
+			for k, v in precisions_at_k.items()
+		}
 
-	return mAP, pks
+	return mAP, precisions_at_k
 
 def evaluate_rank_AUROC_AP(
 	embedding,
